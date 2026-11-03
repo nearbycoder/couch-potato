@@ -78,30 +78,43 @@ final class Catalog {
     }
 
     /// One page of what's on a service. An empty page means the list is exhausted.
-    func onService(_ provider: Provider, kind: MediaKind? = nil, page: Int = 1) async throws -> [CatalogTitle] {
+    func onService(_ provider: Provider, kind: MediaKind? = nil, filter: TitleFilter = TitleFilter(),
+                   page: Int = 1) async throws -> [CatalogTitle] {
         if tmdb == nil {
             if kind == .movie { return [] }
-            return Self.slice(try await series(on: provider), page: page)
+            return Self.slice(filter.apply(try await series(on: provider)), page: page)
         }
-        return try await remember("service-\(provider.id)-\(kind?.rawValue ?? "all")-p\(page)") {
-            guard let tmdb else { return [] }
-            if let kind { return try await tmdb.discover(kind, providers: [provider], page: page) }
-            async let movies = tmdb.discover(.movie, providers: [provider], page: page)
-            async let shows = tmdb.discover(.tv, providers: [provider], page: page)
-            return interleave(try await shows, try await movies)
+        return try await remember("service-\(provider.id)-\(kind?.rawValue ?? "all")-\(filter.key)-p\(page)") {
+            async let movies = kind == .tv ? [] : discover(.movie, providers: [provider], filter: filter, page: page)
+            async let shows = kind == .movie ? [] : discover(.tv, providers: [provider], filter: filter, page: page)
+            return filter.merge(shows: try await shows, movies: try await movies)
         }
     }
 
+    /// One TMDB discover page shaped by a filter; empty when the filter rules the kind out.
+    private func discover(_ kind: MediaKind, providers: [Provider], moodGenres: [Int] = [], filter: TitleFilter,
+                          extra: [String: String?] = [:], page: Int) async throws -> [CatalogTitle] {
+        guard let tmdb, let query = filter.tmdbQuery(for: kind, includeGenre: moodGenres.isEmpty) else { return [] }
+        var params = extra
+        query.extra.forEach { params[$0] = $1 }
+        return try await tmdb.discover(kind, providers: providers, genres: moodGenres.isEmpty ? query.genres : moodGenres,
+                                       sort: query.sort, extra: params, page: page)
+    }
+
     /// One page of titles for a mood. An empty page means the list is exhausted.
-    func mood(_ mood: Mood, kind: MediaKind? = nil, page: Int = 1) async throws -> [CatalogTitle] {
-        if tmdb == nil { return Self.slice(try await openMood(mood, kind: kind), page: page) }
-        return try await remember("mood-\(mood.rawValue)-\(kind?.rawValue ?? "all")-\(prefs.onlyMyServices)-p\(page)") {
-            guard let tmdb else { return [] }
+    func mood(_ mood: Mood, kind: MediaKind? = nil, filter: TitleFilter = TitleFilter(), page: Int = 1) async throws -> [CatalogTitle] {
+        // A mood already picks its genres, so the filter's genre doesn't apply here.
+        var filter = filter
+        filter.genre = nil
+        if tmdb == nil { return Self.slice(filter.apply(try await openMood(mood, kind: kind)), page: page) }
+        return try await remember("mood-\(mood.rawValue)-\(kind?.rawValue ?? "all")-\(prefs.onlyMyServices)-\(filter.key)-p\(page)") {
             let services = prefs.onlyMyServices ? prefs.myServices : []
             let extra: [String: String?] = ["vote_count.gte": "150"]
-            async let movies = kind == .tv ? [] : tmdb.discover(.movie, providers: services, genres: mood.tmdbMovieGenres, extra: extra, page: page)
-            async let shows = kind == .movie ? [] : tmdb.discover(.tv, providers: services, genres: mood.tmdbTVGenres, extra: extra, page: page)
-            return interleave(try await movies, try await shows)
+            async let movies = kind == .tv ? [] : discover(.movie, providers: services, moodGenres: mood.tmdbMovieGenres,
+                                                           filter: filter, extra: extra, page: page)
+            async let shows = kind == .movie ? [] : discover(.tv, providers: services, moodGenres: mood.tmdbTVGenres,
+                                                            filter: filter, extra: extra, page: page)
+            return filter.merge(shows: try await shows, movies: try await movies)
         }
     }
 

@@ -8,6 +8,7 @@ import com.nearbycoder.couchpotato.domain.CatalogTitle
 import com.nearbycoder.couchpotato.domain.MediaKind
 import com.nearbycoder.couchpotato.domain.Mood
 import com.nearbycoder.couchpotato.domain.Provider
+import com.nearbycoder.couchpotato.domain.TitleFilter
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -66,6 +67,7 @@ data class ListState(
     val loading: Boolean = true,
     val titles: List<CatalogTitle> = emptyList(),
     val kind: MediaKind? = null,
+    val filter: TitleFilter = TitleFilter(),
     val error: String? = null,
     val loadingMore: Boolean = false,
     val exhausted: Boolean = false,
@@ -78,10 +80,17 @@ abstract class PagedListViewModel : ViewModel() {
     private var nextPage = 1
     private var job: Job? = null
 
-    protected abstract suspend fun page(kind: MediaKind?, page: Int): List<CatalogTitle>
+    protected abstract suspend fun page(kind: MediaKind?, filter: TitleFilter, page: Int): List<CatalogTitle>
 
     fun setKind(kind: MediaKind?) {
         _state.update { it.copy(kind = kind) }
+        load()
+    }
+
+    /** Applies a new sort/filter and reloads from the first page. */
+    fun setFilter(filter: TitleFilter) {
+        if (filter == _state.value.filter) return
+        _state.update { it.copy(filter = filter) }
         load()
     }
 
@@ -90,7 +99,7 @@ abstract class PagedListViewModel : ViewModel() {
         nextPage = 1
         job = viewModelScope.launch {
             _state.update { it.copy(loading = true, error = null, titles = emptyList(), exhausted = false, loadingMore = false) }
-            runCatching { page(_state.value.kind, 1) }
+            runCatching { _state.value.let { s -> page(s.kind, s.filter, 1) } }
                 .onSuccess { list ->
                     nextPage = 2
                     _state.update { it.copy(titles = list.distinctBy { t -> t.id }, loading = false, exhausted = list.isEmpty()) }
@@ -105,7 +114,7 @@ abstract class PagedListViewModel : ViewModel() {
         val page = nextPage
         job = viewModelScope.launch {
             _state.update { it.copy(loadingMore = true) }
-            runCatching { page(current.kind, page) }
+            runCatching { page(current.kind, current.filter, page) }
                 .onSuccess { batch ->
                     nextPage = page + 1
                     _state.update { s ->
@@ -127,7 +136,7 @@ class ServiceViewModel(container: AppContainer, val provider: Provider) : PagedL
 
     init { load() }
 
-    override suspend fun page(kind: MediaKind?, page: Int) = catalog.onService(provider, kind, page)
+    override suspend fun page(kind: MediaKind?, filter: TitleFilter, page: Int) = catalog.onService(provider, kind, page, filter)
 }
 
 /** Grid for one mood. */
@@ -136,5 +145,5 @@ class MoodViewModel(container: AppContainer, val mood: Mood) : PagedListViewMode
 
     init { load() }
 
-    override suspend fun page(kind: MediaKind?, page: Int) = catalog.mood(mood, kind, page)
+    override suspend fun page(kind: MediaKind?, filter: TitleFilter, page: Int) = catalog.mood(mood, kind, page, filter)
 }

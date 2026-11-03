@@ -84,39 +84,67 @@ class Catalog(private val settingsFlow: StateFlow<Settings>) {
     }
 
     /** One page of what's on a service. An empty page means the list is exhausted. */
-    suspend fun onService(provider: Provider, kind: MediaKind? = null, page: Int = 1): List<CatalogTitle> {
+    suspend fun onService(
+        provider: Provider,
+        kind: MediaKind? = null,
+        page: Int = 1,
+        filter: TitleFilter = TitleFilter(),
+    ): List<CatalogTitle> {
         val client = tmdb
         if (client == null) {
             if (kind == MediaKind.MOVIE) return emptyList()
-            return slice(seriesOn(provider), page)
+            return slice(filter.apply(seriesOn(provider)), page)
         }
-        return remember("service-${provider.id}-${kind?.raw ?: "all"}-p$page") {
-            if (kind != null) return@remember client.discover(kind, listOf(provider), page = page)
+        return remember("service-${provider.id}-${kind?.raw ?: "all"}-${filter.key}-p$page") {
+            suspend fun fetch(k: MediaKind): List<CatalogTitle> {
+                val genres = filter.genre?.tmdbIds(k)
+                // A genre with no ids for this kind (e.g. Reality movies) has nothing to show.
+                if (genres != null && genres.isEmpty()) return emptyList()
+                return client.discover(
+                    k, listOf(provider), genres = genres ?: emptyList(),
+                    sort = filter.tmdbSort(k), extra = filter.tmdbParams(k), page = page,
+                )
+            }
+            if (kind != null) return@remember fetch(kind)
             coroutineScope {
-                val movies = async { client.discover(MediaKind.MOVIE, listOf(provider), page = page) }
-                val shows = async { client.discover(MediaKind.TV, listOf(provider), page = page) }
-                interleave(shows.await(), movies.await())
+                val movies = async { fetch(MediaKind.MOVIE) }
+                val shows = async { fetch(MediaKind.TV) }
+                combine(shows.await(), movies.await(), filter)
             }
         }
     }
 
-    /** One page of titles for a mood. An empty page means the list is exhausted. */
-    suspend fun mood(mood: Mood, kind: MediaKind? = null, page: Int = 1): List<CatalogTitle> {
-        val client = tmdb ?: return slice(openMood(mood, kind), page)
-        return remember("mood-${mood.id}-${kind?.raw ?: "all"}-${settings.onlyMyServices}-p$page") {
+    /**
+     * One page of titles for a mood. An empty page means the list is exhausted.
+     * The mood picks the genres, so [filter]'s genre is ignored here.
+     */
+    suspend fun mood(mood: Mood, kind: MediaKind? = null, page: Int = 1, filter: TitleFilter = TitleFilter()): List<CatalogTitle> {
+        val moodFilter = filter.copy(genre = null)
+        val client = tmdb ?: return slice(moodFilter.apply(openMood(mood, kind)), page)
+        return remember("mood-${mood.id}-${kind?.raw ?: "all"}-${settings.onlyMyServices}-${moodFilter.key}-p$page") {
             val services = if (settings.onlyMyServices) settings.myServices else emptyList()
-            val extra = mapOf<String, String?>("vote_count.gte" to "150")
+            val base = mapOf<String, String?>("vote_count.gte" to "150")
             coroutineScope {
                 val movies = async {
-                    if (kind == MediaKind.TV) emptyList() else client.discover(MediaKind.MOVIE, services, mood.tmdbMovieGenres, extra = extra, page = page)
+                    if (kind == MediaKind.TV) emptyList() else client.discover(
+                        MediaKind.MOVIE, services, mood.tmdbMovieGenres,
+                        sort = moodFilter.tmdbSort(MediaKind.MOVIE), extra = moodFilter.tmdbParams(MediaKind.MOVIE, base), page = page,
+                    )
                 }
                 val shows = async {
-                    if (kind == MediaKind.MOVIE) emptyList() else client.discover(MediaKind.TV, services, mood.tmdbTvGenres, extra = extra, page = page)
+                    if (kind == MediaKind.MOVIE) emptyList() else client.discover(
+                        MediaKind.TV, services, mood.tmdbTvGenres,
+                        sort = moodFilter.tmdbSort(MediaKind.TV), extra = moodFilter.tmdbParams(MediaKind.TV, base), page = page,
+                    )
                 }
-                interleave(movies.await(), shows.await())
+                combine(movies.await(), shows.await(), moodFilter)
             }
         }
     }
+
+    /** Merges a page of two lists: interleaved when popular, otherwise in the filter's order. */
+    private fun combine(first: List<CatalogTitle>, second: List<CatalogTitle>, filter: TitleFilter): List<CatalogTitle> =
+        if (filter.sort == TitleSort.POPULAR) interleave(first, second) else filter.sorted(first + second)
 
     private suspend fun openMood(mood: Mood, kind: MediaKind?): List<CatalogTitle> =
         remember("mood-${mood.id}-${kind?.raw ?: "all"}-${settings.myServiceIds.sorted()}") {

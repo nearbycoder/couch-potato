@@ -35,6 +35,42 @@ final class CouchPotatoTests: XCTestCase {
         XCTAssertEqual(titles[1].posterURL?.lastPathComponent, "b.jpg")
     }
 
+    private func sample(_ name: String, year: Int, genres: [String], score: Double?) -> CatalogTitle {
+        CatalogTitle(ref: TitleRef(source: .tvmaze, kind: .tv, id: name), name: name,
+                     year: year, releaseDate: DateParsing.date("\(year)-06-01"), genres: genres, score: score)
+    }
+
+    func testTitleFilterNarrowsAndSorts() {
+        let titles = [
+            sample("Bravo", year: 2015, genres: ["Drama"], score: 7.5),
+            sample("alpha", year: 2023, genres: ["Science-Fiction"], score: 8.4),
+            sample("Charlie", year: 1988, genres: ["Comedy"], score: nil),
+            sample("Delta", year: 2021, genres: ["Sci-Fi & Fantasy"], score: 6.1),
+        ]
+        // Popular keeps the incoming order.
+        XCTAssertEqual(TitleFilter().apply(titles).map(\.name), ["Bravo", "alpha", "Charlie", "Delta"])
+        XCTAssertEqual(TitleFilter(years: .y2020s).apply(titles).map(\.name), ["alpha", "Delta"])
+        XCTAssertEqual(TitleFilter(years: .older).apply(titles).map(\.name), ["Charlie"])
+        XCTAssertEqual(TitleFilter(genre: .scifi).apply(titles).map(\.name), ["alpha", "Delta"])
+        XCTAssertEqual(TitleFilter(minRating: 7).apply(titles).map(\.name), ["Bravo", "alpha"])
+        XCTAssertEqual(TitleFilter(sort: .newest).apply(titles).map(\.name), ["alpha", "Delta", "Bravo", "Charlie"])
+        XCTAssertEqual(TitleFilter(sort: .rating).apply(titles).map(\.name), ["alpha", "Bravo", "Delta", "Charlie"])
+        XCTAssertEqual(TitleFilter(sort: .title).apply(titles).map(\.name), ["alpha", "Bravo", "Charlie", "Delta"])
+    }
+
+    func testTitleFilterBuildsTMDBQueries() throws {
+        let filter = TitleFilter(sort: .newest, years: .y2010s, genre: .horror, minRating: 7)
+        let movie = try XCTUnwrap(filter.tmdbQuery(for: .movie))
+        XCTAssertEqual(movie.sort, "primary_release_date.desc")
+        XCTAssertEqual(movie.genres, [27])
+        XCTAssertEqual(movie.extra["primary_release_date.gte"], "2010-01-01")
+        XCTAssertEqual(movie.extra["primary_release_date.lte"], "2019-12-31")
+        XCTAssertEqual(movie.extra["vote_average.gte"], "7")
+        // TMDB has no horror genre for series, so the TV half is skipped.
+        XCTAssertNil(filter.tmdbQuery(for: .tv))
+        XCTAssertEqual(TitleFilter(sort: .title).tmdbQuery(for: .tv)?.sort, "name.asc")
+    }
+
     func testITunesArtworkIsUpscaled() {
         let url = ITunesClient.upscale("https://is1-ssl.mzstatic.com/image/thumb/Video211/v4/x/2000x3000_Verity.jpg/115x170bb.png")
         XCTAssertEqual(url?.lastPathComponent, "600x900bb.jpg")

@@ -1,6 +1,8 @@
 package com.nearbycoder.couchpotato.ui.browse
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -12,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -46,6 +47,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nearbycoder.couchpotato.domain.MediaKind
 import com.nearbycoder.couchpotato.domain.Mood
 import com.nearbycoder.couchpotato.domain.Provider
+import com.nearbycoder.couchpotato.domain.TitleFilter
 import com.nearbycoder.couchpotato.ui.components.ChipRow
 import com.nearbycoder.couchpotato.ui.components.EmptyState
 import com.nearbycoder.couchpotato.ui.components.ErrorBanner
@@ -215,6 +217,8 @@ fun ServiceScreen(providerId: String, actions: NavActions) {
         subtitle = "Popular on ${provider.name}",
         state = state,
         onKind = vm::setKind,
+        onFilter = vm::setFilter,
+        showGenre = true,
         onRetry = vm::load,
         onNearEnd = vm::loadMore,
         actions = actions,
@@ -234,11 +238,31 @@ fun MoodScreen(moodId: String, actions: NavActions) {
         subtitle = mood.blurb,
         state = state,
         onKind = vm::setKind,
+        onFilter = vm::setFilter,
+        showGenre = false,
         onRetry = vm::load,
         onNearEnd = vm::loadMore,
         actions = actions,
         emptyFootnote = "Nothing matches this mood right now.",
     )
+}
+
+/** Subtitle, Movies/Series switch and the filter row, shared by every state of [GridScreen]. */
+@Composable
+private fun GridHeader(
+    subtitle: String,
+    state: ListState,
+    onKind: (MediaKind?) -> Unit,
+    onFilter: (TitleFilter) -> Unit,
+    showGenre: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val colors = Couch.colors
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = colors.textSecondary)
+        ChipRow(options = kindOptions, selected = indexOf(state.kind), onSelect = { onKind(kindAt(it)) })
+        FilterRow(filter = state.filter, onChange = onFilter, showGenre = showGenre)
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -248,6 +272,8 @@ private fun GridScreen(
     subtitle: String,
     state: ListState,
     onKind: (MediaKind?) -> Unit,
+    onFilter: (TitleFilter) -> Unit,
+    showGenre: Boolean,
     onRetry: () -> Unit,
     onNearEnd: () -> Unit,
     actions: NavActions,
@@ -271,42 +297,41 @@ private fun GridScreen(
         },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
-            val header: LazyGridScope.() -> Unit = {
-                item(key = "filters", span = { GridItemSpan(maxLineSpan) }) {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = colors.textSecondary)
-                        ChipRow(options = kindOptions, selected = indexOf(state.kind), onSelect = { onKind(kindAt(it)) })
-                    }
-                }
+            val headerFor: @Composable (Modifier) -> Unit = { mod ->
+                GridHeader(subtitle, state, onKind, onFilter, showGenre, mod)
             }
             when {
-                state.loading -> {
-                    Column(Modifier.fillMaxSize()) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = colors.textSecondary)
-                            ChipRow(options = kindOptions, selected = indexOf(state.kind), onSelect = { onKind(kindAt(it)) })
-                        }
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = colors.accent)
-                        }
+                state.loading -> Column(Modifier.fillMaxSize()) {
+                    headerFor(Modifier.padding(16.dp))
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = colors.accent)
                     }
                 }
-                state.error != null -> Column {
-                    Spacer(Modifier.height(16.dp))
+                state.error != null -> Column(Modifier.fillMaxSize()) {
+                    headerFor(Modifier.padding(16.dp))
                     ErrorBanner(state.error, onRetry = onRetry)
                 }
-                state.titles.isEmpty() -> Column(Modifier.fillMaxSize()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = colors.textSecondary)
-                        ChipRow(options = kindOptions, selected = indexOf(state.kind), onSelect = { onKind(kindAt(it)) })
+                state.titles.isEmpty() -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                    headerFor(Modifier.padding(16.dp))
+                    if (state.filter.isDefault) {
+                        EmptyState(icon = Icons.Outlined.SearchOff, headline = "Nothing to show", footnote = emptyFootnote)
+                    } else {
+                        EmptyState(
+                            icon = Icons.Outlined.SearchOff,
+                            headline = "No matches",
+                            footnote = "No titles match these filters.",
+                            actionLabel = "Reset",
+                            onAction = { onFilter(TitleFilter()) },
+                        )
                     }
-                    EmptyState(icon = Icons.Outlined.SearchOff, headline = "Nothing to show", footnote = emptyFootnote)
                 }
                 else -> PosterGrid(
                     titles = state.titles,
                     isWide = isWide,
                     onOpen = { actions.openTitle(it.ref.key) },
-                    header = header,
+                    header = {
+                        item(key = "filters", span = { GridItemSpan(maxLineSpan) }) { headerFor(Modifier) }
+                    },
                     loadingMore = state.loadingMore,
                     onNearEnd = onNearEnd,
                 )

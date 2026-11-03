@@ -152,6 +152,13 @@ struct TVMShow: Decodable {
         case embedded = "_embedded"
     }
 
+    /// TVmaze files animation, documentaries and reality as show types, not genres.
+    private var genresIncludingType: [String] {
+        var all = genres ?? []
+        if let type, ["Animation", "Documentary", "Reality"].contains(type), !all.contains(type) { all.append(type) }
+        return all
+    }
+
     var catalogTitle: CatalogTitle {
         let channels = [webChannel?.name, network?.name].compactMap { $0 }
         var providers: [Provider] = []
@@ -165,7 +172,7 @@ struct TVMShow: Decodable {
             posterURL: (image?.original ?? image?.medium).flatMap(URL.init(string:)),
             year: DateParsing.year(premiered),
             releaseDate: DateParsing.date(premiered),
-            genres: genres ?? [],
+            genres: genresIncludingType,
             score: rating?.average,
             runtime: averageRuntime ?? runtime,
             providers: providers,

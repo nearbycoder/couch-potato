@@ -184,6 +184,15 @@ data class TvmShow(
     val summary: String? = null,
     @SerialName("_embedded") val embedded: TvmEmbedded? = null,
 ) {
+    /** Genres, plus the show type when it reads as a genre (Animation, Documentary, Reality). */
+    val genresWithType: List<String>
+        get() {
+            val base = genres ?: emptyList()
+            val t = type ?: return base
+            if (t !in GENRE_TYPES || base.any { it.equals(t, ignoreCase = true) }) return base
+            return base + t
+        }
+
     val catalogTitle: CatalogTitle
         get() {
             val channels = listOfNotNull(webChannel?.name, network?.name)
@@ -199,7 +208,7 @@ data class TvmShow(
                 posterUrl = image?.original ?: image?.medium,
                 year = DateParsing.year(premiered),
                 releaseDate = DateParsing.date(premiered),
-                genres = genres ?: emptyList(),
+                genres = genresWithType,
                 score = rating?.average,
                 runtime = averageRuntime ?: runtime,
                 providers = providers,
@@ -230,3 +239,6 @@ data class TvmScheduleItem(
     /** `/schedule/web` embeds the show; `/schedule` inlines it. */
     val resolvedShow: TvmShow? get() = embedded?.show ?: show
 }
+
+/** TVmaze show types that double as browse genres. */
+private val GENRE_TYPES = setOf("Animation", "Documentary", "Reality")
