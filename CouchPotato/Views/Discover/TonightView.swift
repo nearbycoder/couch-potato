@@ -135,7 +135,7 @@ struct HeroCarousel: View {
                 LazyHStack(spacing: 16) {
                     ForEach(titles) { title in
                         HeroCard(title: title)
-                            .containerRelativeFrame(.horizontal, count: layout.heroPages, spacing: 16)
+                            .containerRelativeFrame(.horizontal) { length, _ in cardWidth(in: length) }
                             .id(title.id)
                     }
                 }
@@ -156,6 +156,15 @@ struct HeroCarousel: View {
             .accessibilityHidden(true)
         }
     }
+
+    /// One card per page on phones; on wider screens cards stay at least ~760 pt wide
+    /// (so text and artwork never crowd) and a single card leaves the next one peeking in.
+    private func cardWidth(in length: CGFloat) -> CGFloat {
+        if layout.isCompact { return length }
+        let pages = max(1, Int((length + 16) / 776))
+        if pages == 1 { return length - 64 }
+        return (length - 16 * CGFloat(pages - 1)) / CGFloat(pages)
+    }
 }
 
 struct HeroCard: View {
@@ -167,6 +176,9 @@ struct HeroCard: View {
     @Query private var saved: [SavedTitle]
 
     private var isSaved: Bool { saved.contains { $0.key == title.ref.key } }
+    /// Wide layout without a backdrop: the poster sits in its own column beside the text.
+    private var posterMode: Bool { !layout.isCompact && title.backdropURL == nil }
+    private var posterHeight: CGFloat { layout.heroHeight - 64 }
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
@@ -179,12 +191,14 @@ struct HeroCard: View {
                 .contentShape(Rectangle())
                 .onTapGesture { app.push(.detail(title)) }
 
-            LinearGradient(stops: [
-                .init(color: .clear, location: 0.35),
-                .init(color: .black.opacity(0.55), location: 0.7),
-                .init(color: .black.opacity(0.92), location: 1),
-            ], startPoint: .top, endPoint: .bottom)
-            .allowsHitTesting(false)
+            if !posterMode {
+                LinearGradient(stops: [
+                    .init(color: .clear, location: 0.35),
+                    .init(color: .black.opacity(0.55), location: 0.7),
+                    .init(color: .black.opacity(0.92), location: 1),
+                ], startPoint: .top, endPoint: .bottom)
+                .allowsHitTesting(false)
+            }
 
             VStack(alignment: .leading, spacing: 10) {
                 Pill(text: title.kind.label, tint: .white.opacity(0.16), foreground: .white)
@@ -205,6 +219,14 @@ struct HeroCard: View {
                 .foregroundStyle(.white.opacity(0.78))
                 .lineLimit(1)
 
+                if posterMode, !title.overview.isEmpty {
+                    Text(title.overview)
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.8))
+                        .lineLimit(4)
+                        .frame(maxWidth: 440, alignment: .leading)
+                }
+
                 HStack(spacing: 10) {
                     Button {
                         if !isSaved { Library.save(title, status: .queued, in: context) }
@@ -221,9 +243,13 @@ struct HeroCard: View {
                     .buttonStyle(.secondary)
                     .environment(\.colorScheme, .dark)
                 }
+                .lineLimit(1)
+                .fixedSize()
                 .padding(.top, 4)
             }
-            .padding(layout.isCompact ? 18 : 24)
+            .padding(layout.isCompact ? 18 : 28)
+            // Keep the text clear of the poster column.
+            .padding(.trailing, posterMode ? posterHeight * 2 / 3 + 40 : 0)
         }
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Theme.hairline))
@@ -238,13 +264,13 @@ struct HeroCard: View {
         } else if layout.isCompact {
             RemoteImage(url: title.posterURL ?? title.backdropURL, maxPixel: 900, placeholderTitle: title.name)
         } else {
-            // Poster-only sources on wide layouts: a blurred wash with the poster fitted at the trailing edge.
+            // Poster-only sources on wide layouts: a dark wash tinted by the artwork, the poster at the trailing edge.
             ZStack(alignment: .trailing) {
                 RemoteImage(url: title.posterURL, maxPixel: 300, placeholderTitle: nil)
-                    .blur(radius: 36)
-                    .scaleEffect(1.4)
-                Color.black.opacity(0.25)
-                let posterHeight = layout.heroHeight - 56
+                    .blur(radius: 48)
+                    .scaleEffect(1.5)
+                LinearGradient(colors: [.black.opacity(0.85), .black.opacity(0.55), .black.opacity(0.35)],
+                               startPoint: .leading, endPoint: .trailing)
                 RemoteImage(url: title.posterURL, maxPixel: 700, placeholderTitle: title.name)
                     .frame(width: posterHeight * 2 / 3, height: posterHeight)
                     .artwork(radius: 10)

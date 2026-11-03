@@ -1,0 +1,18 @@
+{
+ "updated": "2026-11-03T20:49:03Z",
+ "services": {
+  "netflix": 600,
+  "hulu": 600,
+  "disney": 600,
+  "hbo": 600,
+  "apple": 243,
+  "prime": 600,
+  "peacock": 600,
+  "paramount": 600,
+  "starz": 66,
+  "amc": 216,
+  "crunchyroll": 100,
+  "tubi": 76,
+  "youtube": 600
+ }
+}

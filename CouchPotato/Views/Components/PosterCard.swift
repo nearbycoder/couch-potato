@@ -102,22 +102,95 @@ struct PosterRow: View {
 /// An adaptive grid of posters.
 struct PosterGrid: View {
     var titles: [CatalogTitle]
+    /// Called as the last few posters scroll into view, to fetch the next page.
+    var onNearEnd: (() -> Void)?
 
     @Environment(\.layout) private var layout
     @Query private var saved: [SavedTitle]
 
     var body: some View {
         let statusByKey = Dictionary(saved.map { ($0.key, $0.status) }, uniquingKeysWith: { a, _ in a })
+        let tail = Set(titles.suffix(12).map(\.id))
         LazyVGrid(columns: [GridItem(.adaptive(minimum: layout.gridMinWidth), spacing: 14, alignment: .top)], spacing: 20) {
             ForEach(titles) { title in
                 PosterLink(route: .detail(title)) {
                     GridPoster(title: title, status: statusByKey[title.ref.key])
                 }
                 .titleContextMenu(title)
+                .onAppear { if tail.contains(title.id) { onNearEnd?() } }
             }
         }
         .padding(.horizontal, layout.margin)
         .focusEffectDisabled()
+    }
+}
+
+/// A poster grid that keeps loading pages as you scroll, until a page comes back empty.
+struct PagedGrid<Empty: View>: View {
+    var id: String
+    var load: (Int) async throws -> [CatalogTitle]
+    @ViewBuilder var empty: () -> Empty
+
+    @State private var titles: [CatalogTitle] = []
+    @State private var nextPage = 1
+    @State private var exhausted = false
+    @State private var loading = false
+    @State private var error: Error?
+    @State private var attempt = 0
+
+    var body: some View {
+        Group {
+            if !titles.isEmpty {
+                VStack(spacing: 20) {
+                    PosterGrid(titles: titles) { Task { await loadMore() } }
+                    footer
+                }
+            } else if let error {
+                EmptyState(symbol: "wifi.exclamationmark", title: "Couldn't load",
+                           message: error.localizedDescription, actionTitle: "Try Again") { attempt += 1 }
+            } else if exhausted {
+                empty()
+            } else {
+                LoadingView()
+            }
+        }
+        .task(id: "\(id)#\(attempt)") {
+            titles = []
+            nextPage = 1
+            exhausted = false
+            error = nil
+            loading = false
+            await loadMore()
+        }
+    }
+
+    @ViewBuilder private var footer: some View {
+        if loading {
+            ProgressView().frame(height: 44)
+        } else if error != nil, !exhausted {
+            Button("Load More") { Task { await loadMore() } }.buttonStyle(.secondary)
+        }
+    }
+
+    private func loadMore() async {
+        guard !loading, !exhausted else { return }
+        loading = true
+        defer { loading = false }
+        let page = nextPage
+        do {
+            let batch = try await load(page)
+            guard page == nextPage else { return }
+            let known = Set(titles.map(\.id))
+            let fresh = batch.filter { !known.contains($0.id) }
+            titles += fresh
+            nextPage += 1
+            error = nil
+            // Stop on an empty page, or after a few pages that only repeat what we have.
+            if batch.isEmpty || page >= 40 || (fresh.isEmpty && page > 1) { exhausted = true }
+        } catch is CancellationError {
+        } catch {
+            self.error = error
+        }
     }
 }
 
@@ -128,8 +201,9 @@ struct GridPoster: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            RemoteImage(url: title.posterURL, maxPixel: 500, placeholderTitle: title.name)
+            Color.clear
                 .aspectRatio(2 / 3, contentMode: .fit)
+                .overlay { RemoteImage(url: title.posterURL, maxPixel: 500, placeholderTitle: title.name) }
                 .artwork()
                 .overlay(alignment: .topTrailing) {
                     if let status { StatusMark(status: status).padding(6) }

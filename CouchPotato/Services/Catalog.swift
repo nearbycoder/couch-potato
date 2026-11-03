@@ -13,6 +13,12 @@ final class Catalog {
     @ObservationIgnored private var memo: [String: [CatalogTitle]] = [:]
     @ObservationIgnored private var tvPool: [CatalogTitle]?
     @ObservationIgnored private var moviePool: [String: CatalogTitle] = [:]
+    @ObservationIgnored private var serviceSeries: [String: [CatalogTitle]] = [:]
+
+    /// Page size for key-less lists, which arrive whole and are paged locally.
+    static let pageSize = 60
+    /// Per-service series catalogs built from TVmaze's full index by scripts/build_catalog.py.
+    static let seriesCatalogBase = "https://nearbycoder.github.io/couch-potato/catalog/v1"
 
     init(prefs: Preferences) { self.prefs = prefs }
 
@@ -30,6 +36,7 @@ final class Catalog {
         memo = [:]
         tvPool = nil
         moviePool = [:]
+        serviceSeries = [:]
     }
 
     private func remember(_ key: String, _ load: () async throws -> [CatalogTitle]) async throws -> [CatalogTitle] {
@@ -70,35 +77,53 @@ final class Catalog {
         }
     }
 
-    func onService(_ provider: Provider, kind: MediaKind? = nil) async throws -> [CatalogTitle] {
-        try await remember("service-\(provider.id)-\(kind?.rawValue ?? "all")") {
-            if let tmdb {
-                if let kind { return try await tmdb.discover(kind, providers: [provider]) }
-                async let movies = tmdb.discover(.movie, providers: [provider])
-                async let shows = tmdb.discover(.tv, providers: [provider])
-                return interleave(try await shows, try await movies)
-            }
+    /// One page of what's on a service. An empty page means the list is exhausted.
+    func onService(_ provider: Provider, kind: MediaKind? = nil, page: Int = 1) async throws -> [CatalogTitle] {
+        if tmdb == nil {
             if kind == .movie { return [] }
-            return try await openTVPool().filter { $0.providers.contains(provider) }
+            return Self.slice(try await series(on: provider), page: page)
+        }
+        return try await remember("service-\(provider.id)-\(kind?.rawValue ?? "all")-p\(page)") {
+            guard let tmdb else { return [] }
+            if let kind { return try await tmdb.discover(kind, providers: [provider], page: page) }
+            async let movies = tmdb.discover(.movie, providers: [provider], page: page)
+            async let shows = tmdb.discover(.tv, providers: [provider], page: page)
+            return interleave(try await shows, try await movies)
         }
     }
 
-    func mood(_ mood: Mood, kind: MediaKind? = nil) async throws -> [CatalogTitle] {
-        try await remember("mood-\(mood.rawValue)-\(kind?.rawValue ?? "all")-\(prefs.onlyMyServices)") {
-            if let tmdb {
-                let services = prefs.onlyMyServices ? prefs.myServices : []
-                let extra: [String: String?] = ["vote_count.gte": "150"]
-                async let movies = kind == .tv ? [] : tmdb.discover(.movie, providers: services, genres: mood.tmdbMovieGenres, extra: extra)
-                async let shows = kind == .movie ? [] : tmdb.discover(.tv, providers: services, genres: mood.tmdbTVGenres, extra: extra)
-                return interleave(try await movies, try await shows)
-            }
+    /// One page of titles for a mood. An empty page means the list is exhausted.
+    func mood(_ mood: Mood, kind: MediaKind? = nil, page: Int = 1) async throws -> [CatalogTitle] {
+        if tmdb == nil { return Self.slice(try await openMood(mood, kind: kind), page: page) }
+        return try await remember("mood-\(mood.rawValue)-\(kind?.rawValue ?? "all")-\(prefs.onlyMyServices)-p\(page)") {
+            guard let tmdb else { return [] }
+            let services = prefs.onlyMyServices ? prefs.myServices : []
+            let extra: [String: String?] = ["vote_count.gte": "150"]
+            async let movies = kind == .tv ? [] : tmdb.discover(.movie, providers: services, genres: mood.tmdbMovieGenres, extra: extra, page: page)
+            async let shows = kind == .movie ? [] : tmdb.discover(.tv, providers: services, genres: mood.tmdbTVGenres, extra: extra, page: page)
+            return interleave(try await movies, try await shows)
+        }
+    }
+
+    private func openMood(_ mood: Mood, kind: MediaKind?) async throws -> [CatalogTitle] {
+        try await remember("mood-\(mood.rawValue)-\(kind?.rawValue ?? "all")-\(prefs.myServiceIDs.sorted())") {
             var movies: [CatalogTitle] = []
             if kind != .tv {
                 for genre in mood.itunesGenreIDs { movies += (try? await openMovies(genre: genre)) ?? [] }
             }
-            let shows = kind == .movie ? [] : try await openTVPool().filter(mood.matches)
+            guard kind != .movie else { return dedupe(movies) }
+            var shows = try await openTVPool()
+            let services = prefs.myServices.isEmpty ? Array(Provider.streamers.prefix(6)) : prefs.myServices
+            for provider in services { shows += (try? await series(on: provider)) ?? [] }
+            shows = dedupe(shows).filter(mood.matches).sorted { $0.popularity > $1.popularity }
             return interleave(dedupe(movies), shows)
         }
+    }
+
+    private static func slice(_ titles: [CatalogTitle], page: Int) -> [CatalogTitle] {
+        let start = (page - 1) * pageSize
+        guard page >= 1, start < titles.count else { return [] }
+        return Array(titles[start..<min(start + pageSize, titles.count)])
     }
 
     func search(_ text: String) async throws -> [CatalogTitle] {
@@ -193,6 +218,19 @@ final class Catalog {
         if pool.isEmpty { throw HTTPError.status(503) }
         tvPool = pool
         return pool
+    }
+
+    /// Every series we know streams on a service: the published catalog plus anything
+    /// that aired this week, most popular first. Falls back to this week alone offline.
+    private func series(on provider: Provider) async throws -> [CatalogTitle] {
+        if let hit = serviceSeries[provider.id] { return hit }
+        async let published: [TVMShow]? = try? HTTP.get(URL(string: "\(Self.seriesCatalogBase)/\(provider.id).json")!)
+        let airing = ((try? await openTVPool()) ?? []).filter { $0.providers.contains(provider) }
+        let catalog = (await published ?? []).map(\.catalogTitle).filter { $0.providers.contains(provider) }
+        let all = dedupe(airing + catalog).sorted { $0.popularity > $1.popularity }
+        if all.isEmpty { throw HTTPError.status(503) }
+        if !catalog.isEmpty { serviceSeries[provider.id] = all }
+        return all
     }
 
     private func openMovies(genre: Int?) async throws -> [CatalogTitle] {

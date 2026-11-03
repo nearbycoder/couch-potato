@@ -26,6 +26,7 @@ class Catalog(private val settingsFlow: StateFlow<Settings>) {
     private val memo = HashMap<String, List<CatalogTitle>>()
     private var tvPool: List<CatalogTitle>? = null
     private val moviePool = HashMap<String, CatalogTitle>()
+    private val serviceSeries = HashMap<String, List<CatalogTitle>>()
 
     private val settings: Settings get() = settingsFlow.value
 
@@ -45,6 +46,7 @@ class Catalog(private val settingsFlow: StateFlow<Settings>) {
             memo.clear()
             tvPool = null
             moviePool.clear()
+            serviceSeries.clear()
         }
     }
 
@@ -81,42 +83,77 @@ class Catalog(private val settingsFlow: StateFlow<Settings>) {
         if (kind == MediaKind.MOVIE) openMovies(null) else openTvPool()
     }
 
-    suspend fun onService(provider: Provider, kind: MediaKind? = null): List<CatalogTitle> =
-        remember("service-${provider.id}-${kind?.raw ?: "all"}") {
-            tmdb?.let { client ->
-                if (kind != null) return@remember client.discover(kind, listOf(provider))
-                return@remember coroutineScope {
-                    val movies = async { client.discover(MediaKind.MOVIE, listOf(provider)) }
-                    val shows = async { client.discover(MediaKind.TV, listOf(provider)) }
-                    interleave(shows.await(), movies.await())
-                }
-            }
-            if (kind == MediaKind.MOVIE) return@remember emptyList()
-            openTvPool().filter { provider in it.providers }
+    /** One page of what's on a service. An empty page means the list is exhausted. */
+    suspend fun onService(provider: Provider, kind: MediaKind? = null, page: Int = 1): List<CatalogTitle> {
+        val client = tmdb
+        if (client == null) {
+            if (kind == MediaKind.MOVIE) return emptyList()
+            return slice(seriesOn(provider), page)
         }
-
-    suspend fun mood(mood: Mood, kind: MediaKind? = null): List<CatalogTitle> =
-        remember("mood-${mood.id}-${kind?.raw ?: "all"}-${settings.onlyMyServices}") {
-            tmdb?.let { client ->
-                val services = if (settings.onlyMyServices) settings.myServices else emptyList()
-                val extra = mapOf<String, String?>("vote_count.gte" to "150")
-                return@remember coroutineScope {
-                    val movies = async {
-                        if (kind == MediaKind.TV) emptyList() else client.discover(MediaKind.MOVIE, services, mood.tmdbMovieGenres, extra = extra)
-                    }
-                    val shows = async {
-                        if (kind == MediaKind.MOVIE) emptyList() else client.discover(MediaKind.TV, services, mood.tmdbTvGenres, extra = extra)
-                    }
-                    interleave(movies.await(), shows.await())
-                }
+        return remember("service-${provider.id}-${kind?.raw ?: "all"}-p$page") {
+            if (kind != null) return@remember client.discover(kind, listOf(provider), page = page)
+            coroutineScope {
+                val movies = async { client.discover(MediaKind.MOVIE, listOf(provider), page = page) }
+                val shows = async { client.discover(MediaKind.TV, listOf(provider), page = page) }
+                interleave(shows.await(), movies.await())
             }
+        }
+    }
+
+    /** One page of titles for a mood. An empty page means the list is exhausted. */
+    suspend fun mood(mood: Mood, kind: MediaKind? = null, page: Int = 1): List<CatalogTitle> {
+        val client = tmdb ?: return slice(openMood(mood, kind), page)
+        return remember("mood-${mood.id}-${kind?.raw ?: "all"}-${settings.onlyMyServices}-p$page") {
+            val services = if (settings.onlyMyServices) settings.myServices else emptyList()
+            val extra = mapOf<String, String?>("vote_count.gte" to "150")
+            coroutineScope {
+                val movies = async {
+                    if (kind == MediaKind.TV) emptyList() else client.discover(MediaKind.MOVIE, services, mood.tmdbMovieGenres, extra = extra, page = page)
+                }
+                val shows = async {
+                    if (kind == MediaKind.MOVIE) emptyList() else client.discover(MediaKind.TV, services, mood.tmdbTvGenres, extra = extra, page = page)
+                }
+                interleave(movies.await(), shows.await())
+            }
+        }
+    }
+
+    private suspend fun openMood(mood: Mood, kind: MediaKind?): List<CatalogTitle> =
+        remember("mood-${mood.id}-${kind?.raw ?: "all"}-${settings.myServiceIds.sorted()}") {
             val movies = ArrayList<CatalogTitle>()
             if (kind != MediaKind.TV) {
                 for (genre in mood.itunesGenreIds) movies += runCatching { openMovies(genre) }.getOrDefault(emptyList())
             }
-            val shows = if (kind == MediaKind.MOVIE) emptyList() else openTvPool().filter(mood::matches)
-            interleave(movies.distinctBy { it.id }, shows)
+            if (kind == MediaKind.MOVIE) return@remember movies.distinctBy { it.id }
+            val services = settings.myServices.ifEmpty { Provider.streamers.take(6) }
+            val shows = ArrayList(openTvPool())
+            for (provider in services) shows += runCatching { seriesOn(provider) }.getOrDefault(emptyList())
+            val matching = shows.distinctBy { it.id }.filter(mood::matches).sortedByDescending { it.popularity }
+            interleave(movies.distinctBy { it.id }, matching)
         }
+
+    /**
+     * Every series we know streams on a service: the published catalog plus anything
+     * that aired this week, most popular first. Falls back to this week alone offline.
+     */
+    private suspend fun seriesOn(provider: Provider): List<CatalogTitle> {
+        memoLock.withLock { serviceSeries[provider.id] }?.let { return it }
+        val (airing, published) = coroutineScope {
+            val published = async { runCatching { tvmaze.publishedSeries(provider.id) }.getOrDefault(emptyList()) }
+            val airing = runCatching { openTvPool() }.getOrDefault(emptyList()).filter { provider in it.providers }
+            airing to published.await().map { it.catalogTitle }.filter { provider in it.providers }
+        }
+        val all = (airing + published).distinctBy { it.id }.sortedByDescending { it.popularity }
+        if (all.isEmpty()) throw HttpException(503)
+        if (published.isNotEmpty()) memoLock.withLock { serviceSeries[provider.id] = all }
+        return all
+    }
+
+    private fun slice(titles: List<CatalogTitle>, page: Int): List<CatalogTitle> {
+        val start = (page - 1) * PAGE_SIZE
+        if (page < 1 || start >= titles.size) return emptyList()
+        return titles.subList(start, minOf(start + PAGE_SIZE, titles.size))
+    }
 
     suspend fun search(text: String): List<CatalogTitle> {
         val query = text.trim()
@@ -221,6 +258,11 @@ class Catalog(private val settingsFlow: StateFlow<Settings>) {
         val movies = itunes.topMovies(genre)
         memoLock.withLock { for (movie in movies) moviePool[movie.id] = movie }
         movies
+    }
+
+    companion object {
+        /** Page size for key-less lists, which arrive whole and are paged locally. */
+        const val PAGE_SIZE = 60
     }
 
     private fun uniqueShows(items: List<TvmScheduleItem>): List<CatalogTitle> {

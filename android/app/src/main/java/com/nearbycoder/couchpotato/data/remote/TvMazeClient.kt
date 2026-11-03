@@ -30,6 +30,9 @@ class TvMazeClient {
     suspend fun search(text: String): List<CatalogTitle> =
         get<List<TvmSearchResult>>("/search/shows", mapOf("q" to text)).map { it.show.catalogTitle }
 
+    /** Every series known to stream on a service, from the catalog built by scripts/build_catalog.py. */
+    suspend fun publishedSeries(serviceId: String): List<TvmShow> = Http.get("$CATALOG_BASE/$serviceId.json")
+
     /** Episodes released on streaming services (`web`) or US broadcast on a given day. */
     suspend fun schedule(date: LocalDate, web: Boolean): List<TvmScheduleItem> {
         val day = DateParsing.dayString(date)
@@ -81,6 +84,7 @@ class TvMazeClient {
 
     companion object {
         private const val BASE = "https://api.tvmaze.com"
+        const val CATALOG_BASE = "https://nearbycoder.github.io/couch-potato/catalog/v1"
     }
 }
 

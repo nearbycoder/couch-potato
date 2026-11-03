@@ -17,15 +17,22 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -159,10 +166,24 @@ fun PosterGrid(
     subtitleFor: (CatalogTitle) -> String? = { it.subtitle },
     onLongPress: ((CatalogTitle) -> Unit)? = null,
     header: (LazyGridScope.() -> Unit)? = null,
+    loadingMore: Boolean = false,
+    onNearEnd: (() -> Unit)? = null,
 ) {
     val minSize = if (isWide) 156.dp else 112.dp
+    val gridState = rememberLazyGridState()
+    if (onNearEnd != null) {
+        val nearEnd by remember(gridState) {
+            derivedStateOf {
+                val info = gridState.layoutInfo
+                val last = info.visibleItemsInfo.lastOrNull()?.index ?: 0
+                info.totalItemsCount > 0 && last >= info.totalItemsCount - 12
+            }
+        }
+        LaunchedEffect(nearEnd, titles.size) { if (nearEnd) onNearEnd() }
+    }
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize),
+        state = gridState,
         modifier = modifier,
         contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -179,6 +200,13 @@ fun PosterGrid(
                 status = statusFor(item),
                 onLongClick = onLongPress?.let { cb -> { cb(item) } },
             )
+        }
+        if (loadingMore) {
+            item(key = "loading-more", span = { GridItemSpan(maxLineSpan) }) {
+                Box(Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Couch.colors.accent, modifier = Modifier.size(28.dp))
+                }
+            }
         }
     }
 }

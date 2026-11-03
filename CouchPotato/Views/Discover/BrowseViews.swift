@@ -10,36 +10,20 @@ struct MoodView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                ZStack(alignment: .bottomLeading) {
-                    LinearGradient(colors: mood.gradient, startPoint: .topLeading, endPoint: .bottomTrailing)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Image(systemName: mood.symbol).font(.title2).foregroundStyle(.white.opacity(0.9)).padding(.bottom, 6)
-                        Text(mood.title).font(.title.bold()).foregroundStyle(.white)
-                        Text(mood.blurb).font(.subheadline).foregroundStyle(.white.opacity(0.8))
-                    }
-                    .padding(20)
-                }
-                .frame(height: 150)
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .padding(.horizontal, layout.margin)
-
                 KindPicker(kind: $kind).padding(.horizontal, layout.margin)
 
-                Loadable(id: "mood-\(mood.id)-\(kind?.rawValue ?? "all")-\(prefs.region)-\(catalog.hasTMDB)-\(prefs.onlyMyServices)",
-                         load: { try await catalog.mood(mood, kind: kind) }) { titles in
-                    if titles.isEmpty {
-                        EmptyState(symbol: "rectangle.on.rectangle.slash", title: "Nothing here yet",
-                                   message: "Try another mood, or add a TMDB API key in Settings for the full catalog.")
-                    } else {
-                        PosterGrid(titles: titles)
-                    }
+                PagedGrid(id: "mood-\(mood.id)-\(kind?.rawValue ?? "all")-\(prefs.region)-\(catalog.hasTMDB)-\(prefs.onlyMyServices)",
+                          load: { try await catalog.mood(mood, kind: kind, page: $0) }) {
+                    EmptyState(symbol: "rectangle.on.rectangle.slash", title: "Nothing here yet",
+                               message: "Try another mood, or add a TMDB API key in Settings for the full catalog.")
                 }
             }
             .padding(.vertical)
         }
         .appBackground()
         .navigationTitle(mood.title)
-        .inlineTitle()
+        .navigationSubtitle(mood.blurb)
+        .largeTitle()
     }
 }
 
@@ -53,44 +37,39 @@ struct ProviderView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                HStack(spacing: 14) {
-                    ProviderTile(provider: provider, size: 56)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(provider.name).font(.title2.weight(.semibold)).foregroundStyle(Theme.textPrimary)
-                        Text(prefs.isMine(provider) ? "One of your services" : "Not in your services")
-                            .font(.footnote).foregroundStyle(Theme.textSecondary)
-                    }
-                    Spacer()
-                    Button {
-                        prefs.toggle(provider)
-                        catalog.reset()
-                    } label: {
-                        Label(prefs.isMine(provider) ? "Added" : "Add", systemImage: prefs.isMine(provider) ? "checkmark" : "plus")
-                    }
-                    .buttonStyle(.secondary)
+                if catalog.hasTMDB {
+                    KindPicker(kind: $kind).padding(.horizontal, layout.margin)
+                } else {
+                    Text("Series only. Add a free TMDB API key in Settings to include \(provider.name) movies and availability for your region.")
+                        .font(.footnote).foregroundStyle(Theme.textTertiary)
+                        .padding(.horizontal, layout.margin)
                 }
-                .card()
-                .padding(.horizontal, layout.margin)
 
-                if catalog.hasTMDB { KindPicker(kind: $kind).padding(.horizontal, layout.margin) }
-
-                Loadable(id: "svc-\(provider.id)-\(kind?.rawValue ?? "all")-\(prefs.region)-\(catalog.hasTMDB)",
-                         load: { try await catalog.onService(provider, kind: kind) }) { titles in
-                    if titles.isEmpty {
-                        EmptyState(symbol: "play.tv", title: "Nothing to show",
-                                   message: catalog.hasTMDB
-                                   ? "No titles found for \(provider.name) in \(prefs.region)."
-                                   : "Without a TMDB API key only series airing this week are visible. Add a free key in Settings to browse the full \(provider.name) catalog.")
-                    } else {
-                        PosterGrid(titles: titles)
-                    }
+                PagedGrid(id: "svc-\(provider.id)-\(kind?.rawValue ?? "all")-\(prefs.region)-\(catalog.hasTMDB)",
+                          load: { try await catalog.onService(provider, kind: kind, page: $0) }) {
+                    EmptyState(symbol: "play.tv", title: "Nothing to show",
+                               message: catalog.hasTMDB
+                               ? "No titles found for \(provider.name) in \(prefs.region)."
+                               : "No series found for \(provider.name). Add a free TMDB API key in Settings to browse movies too.")
                 }
             }
             .padding(.vertical)
         }
         .appBackground()
         .navigationTitle(provider.name)
-        .inlineTitle()
+        .navigationSubtitle(prefs.isMine(provider) ? "One of your services" : "")
+        .largeTitle()
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    prefs.toggle(provider)
+                } label: {
+                    Label(prefs.isMine(provider) ? "Remove from My Services" : "Add to My Services",
+                          systemImage: prefs.isMine(provider) ? "checkmark.circle.fill" : "plus.circle")
+                }
+                .help(prefs.isMine(provider) ? "Remove from My Services" : "Add to My Services")
+            }
+        }
     }
 }
 

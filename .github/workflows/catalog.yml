@@ -1,0 +1,40 @@
+name: Refresh series catalog
+
+# Rebuilds docs/catalog/v1 (the per-service series lists the apps use without a
+# TMDB key) from TVmaze's show index, and commits it if anything changed. The
+# commit redeploys GitHub Pages.
+on:
+  schedule:
+    - cron: "17 9 * * 1"   # Mondays 09:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: catalog
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build catalog
+        run: python3 scripts/build_catalog.py
+      - name: Commit changes
+        run: |
+          # index.json's timestamp always changes; only commit when a list did.
+          if git diff --quiet -- docs/catalog/v1 ':!docs/catalog/v1/index.json'; then
+            echo "Catalog unchanged."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/catalog/v1
+          git commit -m "Refresh series catalog"
+          git push

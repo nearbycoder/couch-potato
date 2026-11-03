@@ -216,8 +216,9 @@ fun ServiceScreen(providerId: String, actions: NavActions) {
         state = state,
         onKind = vm::setKind,
         onRetry = vm::load,
+        onNearEnd = vm::loadMore,
         actions = actions,
-        emptyFootnote = if (!container.catalog.hasTmdb) "Without a TMDB key, only series airing now on ${provider.name} are listed." else "Nothing here right now.",
+        emptyFootnote = if (!container.catalog.hasTmdb) "Series only. Add a free TMDB key in Settings to include ${provider.name} movies." else "Nothing here right now.",
     )
 }
 
@@ -234,6 +235,7 @@ fun MoodScreen(moodId: String, actions: NavActions) {
         state = state,
         onKind = vm::setKind,
         onRetry = vm::load,
+        onNearEnd = vm::loadMore,
         actions = actions,
         emptyFootnote = "Nothing matches this mood right now.",
     )
@@ -247,6 +249,7 @@ private fun GridScreen(
     state: ListState,
     onKind: (MediaKind?) -> Unit,
     onRetry: () -> Unit,
+    onNearEnd: () -> Unit,
     actions: NavActions,
     emptyFootnote: String,
 ) {
@@ -304,6 +307,8 @@ private fun GridScreen(
                     isWide = isWide,
                     onOpen = { actions.openTitle(it.ref.key) },
                     header = header,
+                    loadingMore = state.loadingMore,
+                    onNearEnd = onNearEnd,
                 )
             }
         }
