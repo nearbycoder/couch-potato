@@ -9,6 +9,10 @@ import com.nearbycoder.couchpotato.domain.MediaKind
 import com.nearbycoder.couchpotato.domain.Mood
 import com.nearbycoder.couchpotato.domain.TimeBudget
 import com.nearbycoder.couchpotato.domain.WatchStatus
+import com.nearbycoder.couchpotato.domain.ai.AiStatus
+import com.nearbycoder.couchpotato.domain.ai.Prompts
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -27,17 +31,25 @@ data class ShuffleState(
     val spinning: Boolean = false,
     val winner: CatalogTitle? = null,
     val spinId: Int = 0,
+    /** "Why tonight": a short on-device pitch for the winner; null when unavailable. */
+    val pitch: String? = null,
+    val pitchLoading: Boolean = false,
 )
 
 class ShuffleViewModel(private val container: AppContainer) : ViewModel() {
     private val _state = MutableStateFlow(ShuffleState())
     val state: StateFlow<ShuffleState> = _state
 
-    init { refresh() }
+    private var pitchJob: Job? = null
 
-    fun setPool(pool: ShufflePool) { _state.update { it.copy(pool = pool, winner = null) }; refresh() }
-    fun setMood(mood: Mood?) { _state.update { it.copy(mood = mood, winner = null) }; refresh() }
-    fun setBudget(budget: TimeBudget) { _state.update { it.copy(budget = budget, winner = null) }; refresh() }
+    init {
+        container.ai.checkIfNeeded()
+        refresh()
+    }
+
+    fun setPool(pool: ShufflePool) { clearPitch(); _state.update { it.copy(pool = pool, winner = null) }; refresh() }
+    fun setMood(mood: Mood?) { clearPitch(); _state.update { it.copy(mood = mood, winner = null) }; refresh() }
+    fun setBudget(budget: TimeBudget) { clearPitch(); _state.update { it.copy(budget = budget, winner = null) }; refresh() }
 
     fun refresh() {
         viewModelScope.launch {
@@ -70,11 +82,45 @@ class ShuffleViewModel(private val container: AppContainer) : ViewModel() {
     fun spin() {
         val s = _state.value
         if (s.candidates.isEmpty() || s.spinning) return
+        clearPitch()
         _state.update { it.copy(spinning = true, winner = null, spinId = it.spinId + 1, candidates = it.candidates.shuffled()) }
     }
 
     fun land(winner: CatalogTitle) {
         _state.update { it.copy(spinning = false, winner = winner) }
+        startPitch(winner)
+    }
+
+    /** Streams a short pitch for [winner] when the on-device model is ready. Silent on failure. */
+    private fun startPitch(winner: CatalogTitle) {
+        clearPitch()
+        if (container.ai.status.value !is AiStatus.Ready) return
+        val s = _state.value
+        pitchJob = viewModelScope.launch {
+            _state.update { it.copy(pitchLoading = true) }
+            try {
+                container.ai.stream(
+                    prompt = Prompts.pitchRequest(winner, s.mood, s.budget),
+                    instructions = Prompts.PITCH_INSTRUCTIONS,
+                    temperature = 0.7f,
+                    maxTokens = 96,
+                ).collect { text ->
+                    val clean = Prompts.cleanPitch(text)
+                    if (clean.isNotEmpty() && _state.value.winner?.id == winner.id) _state.update { it.copy(pitch = clean) }
+                }
+                _state.update { it.copy(pitchLoading = false) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Throwable) {
+                _state.update { it.copy(pitch = null, pitchLoading = false) }
+            }
+        }
+    }
+
+    private fun clearPitch() {
+        pitchJob?.cancel()
+        pitchJob = null
+        _state.update { it.copy(pitch = null, pitchLoading = false) }
     }
 
     fun watchNow(title: CatalogTitle, done: () -> Unit) {

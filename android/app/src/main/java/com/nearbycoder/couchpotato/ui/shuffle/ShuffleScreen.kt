@@ -1,6 +1,13 @@
 package com.nearbycoder.couchpotato.ui.shuffle
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -128,6 +135,8 @@ fun ShuffleScreen(actions: NavActions) {
                     )
                     state.winner != null && !state.spinning -> WinnerCard(
                         title = state.winner!!,
+                        pitch = state.pitch,
+                        pitchLoading = state.pitchLoading,
                         isWide = isWide,
                         onWatchNow = { vm.watchNow(state.winner!!) { actions.openTitle(state.winner!!.ref.key) } },
                         onPlan = {
@@ -271,6 +280,8 @@ private fun PosterStack(
 @Composable
 private fun WinnerCard(
     title: CatalogTitle,
+    pitch: String?,
+    pitchLoading: Boolean,
     isWide: Boolean,
     onWatchNow: () -> Unit,
     onPlan: () -> Unit,
@@ -299,11 +310,46 @@ private fun WinnerCard(
             Poster(title.posterUrl, modifier = Modifier.width(if (isWide) 200.dp else 160.dp), radius = 14.dp)
             Text(title.name, style = MaterialTheme.typography.headlineSmall, color = colors.textPrimary, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(title.metadataLine.ifEmpty { title.kind.label }, style = MaterialTheme.typography.bodyMedium, color = colors.textSecondary, textAlign = TextAlign.Center, maxLines = 1)
+            Pitch(pitch = pitch, loading = pitchLoading)
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 PrimaryButton(text = "Watch now", icon = Icons.Outlined.PlayArrow, onClick = onWatchNow)
                 SecondaryButton(text = "Plan it", icon = Icons.Outlined.Event, onClick = onPlan)
             }
             SecondaryButton(text = "Shuffle again", icon = Icons.Outlined.Shuffle, onClick = onAgain)
+        }
+    }
+}
+
+/** The on-device "why tonight" line: a shimmer while the first words arrive, then the text. */
+@Composable
+private fun Pitch(pitch: String?, loading: Boolean) {
+    val colors = Couch.colors
+    Box(Modifier.fillMaxWidth().animateContentSize(), contentAlignment = Alignment.Center) {
+        when {
+            !pitch.isNullOrEmpty() -> Text(
+                pitch,
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.textPrimary.copy(alpha = 0.86f),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.widthIn(max = 420.dp).padding(horizontal = 4.dp),
+            )
+            loading -> {
+                val transition = rememberInfiniteTransition(label = "pitch")
+                val alpha by transition.animateFloat(
+                    initialValue = 0.35f,
+                    targetValue = 0.8f,
+                    animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
+                    label = "pitchAlpha",
+                )
+                Column(
+                    Modifier.alpha(alpha).semantics { contentDescription = "Writing a pitch" },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Box(Modifier.width(240.dp).height(10.dp).clip(CircleShape).background(colors.secondaryFill))
+                    Box(Modifier.width(170.dp).height(10.dp).clip(CircleShape).background(colors.secondaryFill))
+                }
+            }
         }
     }
 }

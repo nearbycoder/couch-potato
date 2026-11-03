@@ -68,6 +68,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nearbycoder.couchpotato.data.local.SettingsRepository
 import com.nearbycoder.couchpotato.domain.CouchRank
 import com.nearbycoder.couchpotato.domain.Provider
+import com.nearbycoder.couchpotato.domain.ai.AiStatus
 import com.nearbycoder.couchpotato.ui.components.GroupCard
 import com.nearbycoder.couchpotato.ui.components.Hairline
 import com.nearbycoder.couchpotato.ui.components.ProviderTile
@@ -86,6 +87,7 @@ fun SettingsScreen(actions: NavActions) {
     val state by vm.state.collectAsStateWithLifecycle()
     val keyStatus by vm.keyStatus.collectAsStateWithLifecycle()
     val message by vm.message.collectAsStateWithLifecycle()
+    val aiStatus by vm.aiStatus.collectAsStateWithLifecycle()
     val colors = Couch.colors
     val isWide = isWideLayout()
     val context = LocalContext.current
@@ -216,6 +218,15 @@ fun SettingsScreen(actions: NavActions) {
                     }
                     Hairline()
                     LinkRow("Get a free TMDB key") { uriHandler.openUri("https://www.themoviedb.org/settings/api") }
+                }
+            }
+
+            item(key = "ai") {
+                Section(
+                    "On-device AI",
+                    footer = "Runs entirely on your device with Gemini Nano. Your requests are never sent to a server.",
+                ) {
+                    AiRow(status = aiStatus, onDownload = vm::downloadModel)
                 }
             }
 
@@ -427,5 +438,51 @@ private fun Stat(value: String, label: String, modifier: Modifier = Modifier) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(value, style = MaterialTheme.typography.titleLarge, color = colors.textPrimary, textAlign = TextAlign.Center)
         Text(label, style = MaterialTheme.typography.labelSmall, color = colors.textSecondary, textAlign = TextAlign.Center)
+    }
+}
+
+@Composable
+private fun AiRow(status: AiStatus, onDownload: () -> Unit) {
+    val colors = Couch.colors
+    val (label, dot) = when (status) {
+        AiStatus.Checking -> "Checking availability" to colors.textTertiary
+        AiStatus.Unsupported -> "Not supported on this device" to colors.textTertiary
+        AiStatus.Downloadable -> "Download available" to colors.accent
+        is AiStatus.Downloading -> (status.progress?.let { "Downloading model · ${(it * 100).toInt()}%" } ?: "Downloading model") to colors.accent
+        AiStatus.Ready -> "Ready" to colors.success
+    }
+    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.size(8.dp).clip(CircleShape).background(dot))
+            Column(Modifier.weight(1f)) {
+                Text("Gemini Nano", style = MaterialTheme.typography.bodyMedium, color = colors.textPrimary)
+                Text(label, style = MaterialTheme.typography.bodySmall, color = colors.textSecondary)
+            }
+            if (status is AiStatus.Downloadable) {
+                Button(
+                    onClick = onDownload,
+                    shape = CircleShape,
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.accent, contentColor = colors.onAccent),
+                ) { Text("Download") }
+            }
+        }
+        if (status is AiStatus.Downloading) {
+            val progress = status.progress
+            if (progress != null) {
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape),
+                    color = colors.accent,
+                    trackColor = colors.secondaryFill,
+                    drawStopIndicator = {},
+                )
+            } else {
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape),
+                    color = colors.accent,
+                    trackColor = colors.secondaryFill,
+                )
+            }
+        }
     }
 }

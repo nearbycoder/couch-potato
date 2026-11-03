@@ -11,6 +11,7 @@ import com.nearbycoder.couchpotato.data.remote.TmdbClient
 import com.nearbycoder.couchpotato.domain.Backup
 import com.nearbycoder.couchpotato.domain.CouchRank
 import com.nearbycoder.couchpotato.domain.Provider
+import com.nearbycoder.couchpotato.domain.ai.AiStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -38,6 +39,13 @@ data class SettingsState(
 
 class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     private val repo = container.settings
+
+    val aiStatus: StateFlow<AiStatus> = container.ai.status
+
+    init { container.ai.checkIfNeeded() }
+
+    /** Runs in the app scope so the download survives leaving Settings. */
+    fun downloadModel() = container.ai.startDownload()
 
     val state: StateFlow<SettingsState> = combine(repo.settings, container.library.savedTitles, container.library.couchNights) { s, titles, nights ->
         SettingsState(settings = s, rank = CouchRank(titles, nights), titleCount = titles.size, nightCount = nights.size)

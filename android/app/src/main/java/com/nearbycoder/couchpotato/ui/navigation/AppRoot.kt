@@ -46,6 +46,7 @@ import androidx.navigation.toRoute
 import com.nearbycoder.couchpotato.AppContainer
 import com.nearbycoder.couchpotato.domain.Mood
 import com.nearbycoder.couchpotato.domain.Provider
+import com.nearbycoder.couchpotato.ui.ask.AskScreen
 import com.nearbycoder.couchpotato.ui.browse.BrowseScreen
 import com.nearbycoder.couchpotato.ui.browse.MoodScreen
 import com.nearbycoder.couchpotato.ui.browse.ServiceScreen
@@ -83,6 +84,7 @@ class NavActions(private val nav: NavHostController) {
     fun openService(provider: Provider) = nav.navigate(ServiceRoute(provider.id))
     fun openMood(mood: Mood) = nav.navigate(MoodRoute(mood.id))
     fun openSettings() = nav.navigate(SettingsRoute)
+    fun openAsk() = nav.navigate(AskRoute)
     fun back() { nav.popBackStack() }
 
     fun selectTab(route: Any) {
@@ -172,6 +174,7 @@ fun AppRoot(container: AppContainer, deepLink: Uri?, onDeepLinkConsumed: () -> U
                 composable<PlannerRoute> { PlannerScreen(actions) }
                 composable<ShuffleRoute> { ShuffleScreen(actions) }
                 composable<SettingsRoute> { SettingsScreen(actions) }
+                composable<AskRoute> { AskScreen(actions) }
                 composable<DetailRoute> { entry ->
                     val route = entry.toRoute<DetailRoute>()
                     DetailScreen(titleKey = route.key, actions = actions)

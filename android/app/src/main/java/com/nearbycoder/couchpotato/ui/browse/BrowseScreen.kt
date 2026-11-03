@@ -1,6 +1,15 @@
 package com.nearbycoder.couchpotato.ui.browse
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
@@ -74,6 +83,8 @@ fun BrowseScreen(actions: NavActions) {
     val isWide = isWideLayout()
     val colors = Couch.colors
     val focus = LocalFocusManager.current
+    val aiStatus by container.ai.status.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { container.ai.checkIfNeeded() }
 
     Scaffold(
         containerColor = colors.bg,
@@ -129,6 +140,7 @@ fun BrowseScreen(actions: NavActions) {
                 onSuggest = vm::setQuery,
                 onService = actions::openService,
                 onMood = actions::openMood,
+                onAsk = if (aiStatus.isOffered) actions::openAsk else null,
                 isWide = isWide,
                 modifier = Modifier.fillMaxSize().padding(padding),
             )
@@ -156,12 +168,16 @@ private fun IdleBrowse(
     onSuggest: (String) -> Unit,
     onService: (Provider) -> Unit,
     onMood: (Mood) -> Unit,
+    onAsk: (() -> Unit)?,
     isWide: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val colors = Couch.colors
     val serviceColumns = if (isWide) 4 else 2
     LazyColumn(modifier = modifier, contentPadding = PaddingValues(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+        if (onAsk != null) {
+            item(key = "ask") { AskEntry(onClick = onAsk, modifier = Modifier.padding(horizontal = 16.dp).padding(top = 8.dp)) }
+        }
         item(key = "suggestions") {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionHeader(title = "Try searching for")
@@ -202,6 +218,36 @@ private fun IdleBrowse(
                 MoodGrid(onOpen = onMood, columns = if (isWide) 3 else 2)
             }
         }
+    }
+}
+
+/** Entry point to "Ask Couch Potato", shown only when the on-device model is available. */
+@Composable
+private fun AskEntry(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val colors = Couch.colors
+    val shape = RoundedCornerShape(16.dp)
+    Row(
+        modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(colors.surface)
+            .border(1.dp, colors.hairline, shape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Box(
+            Modifier.size(40.dp).clip(CircleShape).background(colors.accent.copy(alpha = 0.16f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = colors.accent, modifier = Modifier.size(22.dp))
+        }
+        Column(Modifier.weight(1f)) {
+            Text("Describe what you want to watch", style = MaterialTheme.typography.titleSmall, color = colors.textPrimary)
+            Text("Ask Couch Potato. Runs on your device.", style = MaterialTheme.typography.bodySmall, color = colors.textSecondary)
+        }
+        Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = colors.textTertiary, modifier = Modifier.size(20.dp))
     }
 }
 

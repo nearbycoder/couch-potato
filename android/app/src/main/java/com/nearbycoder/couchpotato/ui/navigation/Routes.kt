@@ -28,3 +28,6 @@ data class ServiceRoute(val providerId: String)
 
 @Serializable
 data class MoodRoute(val moodId: String)
+
+@Serializable
+object AskRoute
