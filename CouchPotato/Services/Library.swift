@@ -50,22 +50,21 @@ enum Library {
     }
 }
 
-/// Couch Rank: a silly progression system based on what you've watched.
+/// Watch level: light progression based on what you've watched.
 struct CouchRank {
     struct Level {
         let name: String
-        let emoji: String
         let threshold: Int
         let quip: String
     }
 
     static let levels: [Level] = [
-        Level(name: "Raw Spud", emoji: "🥔", threshold: 0, quip: "Freshly dug. The couch awaits."),
-        Level(name: "Tater Tot", emoji: "🧆", threshold: 3, quip: "Small, round, full of potential."),
-        Level(name: "Hash Brown", emoji: "🟫", threshold: 10, quip: "Crispy around the edges."),
-        Level(name: "Curly Fry", emoji: "🌀", threshold: 25, quip: "You've developed a twist."),
-        Level(name: "Baked Legend", emoji: "🔥", threshold: 50, quip: "Loaded with toppings and lore."),
-        Level(name: "Mashed Royalty", emoji: "👑", threshold: 100, quip: "The couch bows to you."),
+        Level(name: "Newcomer", threshold: 0, quip: "Just getting started."),
+        Level(name: "Regular", threshold: 3, quip: "Finding your rhythm."),
+        Level(name: "Enthusiast", threshold: 10, quip: "You have opinions now."),
+        Level(name: "Connoisseur", threshold: 25, quip: "Taste, refined."),
+        Level(name: "Cinephile", threshold: 50, quip: "Credits are not optional."),
+        Level(name: "Legend", threshold: 100, quip: "The couch is yours."),
     ]
 
     let points: Int

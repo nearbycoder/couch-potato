@@ -1,52 +1,48 @@
-<p align="center"><img src="docs/icon.png" width="128" height="128" alt="Couch Potato app icon: Spud the potato on a teal couch"></p>
+<p align="center"><img src="docs/icon.png" width="112" height="112" alt="Couch Potato app icon"></p>
 
-<h1 align="center">Couch Potato 🥔🛋️</h1>
+<h1 align="center">Couch Potato</h1>
 
-<p align="center"><b>Your whole streaming universe, one comfy couch.</b><br>
-A whimsical SwiftUI app for iPhone, iPad and Mac that finds what to watch across Netflix, Hulu, Disney+, HBO Max, Apple TV, Prime Video, Peacock, Paramount+ and more, then helps you plan it.</p>
+<p align="center"><b>Everything you want to watch. One place.</b><br>
+A streaming companion for iPhone, iPad, iPhone Duo, Mac and Android. It finds movies and series across Netflix, Hulu, Disney+, HBO Max, Apple TV, Prime Video, Peacock, Paramount+ and more, shows you where to stream them, and helps you plan what to watch next.</p>
 
-<p align="center"><a href="https://nearbycoder.github.io/couch-potato/">Website</a> · <a href="#build-it">Build it</a> · <a href="https://nearbycoder.github.io/couch-potato/privacy.html">Privacy</a></p>
+<p align="center"><a href="https://nearbycoder.github.io/couch-potato/">Website</a> · <a href="#build">Build</a> · <a href="DESIGN.md">Design system</a> · <a href="https://nearbycoder.github.io/couch-potato/privacy.html">Privacy</a></p>
 
-![Tonight screen](docs/screenshots/tonight.jpg)
+![Tonight on the Mac](docs/screenshots/mac-tonight.jpg)
 
-## What's on the couch
+## Features
 
-| | |
-|---|---|
-| **🔥 Tonight's Tater** | A home feed with a backdrop carousel, trending titles, new streaming releases, "Hot on Netflix/Hulu/…" rows built from *your* services, and popular movies and series. |
-| **📡 Where to Watch** | Shows which services stream, rent or sell a title in your region. Your own services are highlighted, and one tap opens the title in that service. |
-| **🛋️ Couch Queue** | A watchlist with four statuses (Want to Watch · Watching · Watched · Dropped), episode-by-episode progress, notes, and filters by service and type. |
-| **📅 Spud Planner** | A week planner for couch nights. It can add them to Apple Calendar, remind you beforehand, and list upcoming episodes of shows you follow (with new-episode alerts). |
-| **🎡 Spud Roulette** | Can't decide? Spin a wheel of box art built from your queue or from surprises. You can filter it by mood and by how much time you have. |
-| **🎭 Mood Mash** | Cozy · Belly Laughs · Edge of Couch · Big Feels · Spooky · Brain Food. |
-| **🥔 Potato Ratings & Couch Rank** | Rate titles 1–5 potatoes, and level up from Raw Spud → Tater Tot → Hash Brown → Curly Fry → Baked Legend → Mashed Royalty. |
-| **☁️ iCloud Sync** | Your queue, ratings, progress and plans sync between iPhone, iPad and Mac through SwiftData + CloudKit. Settings (your services, region, TMDB key) sync through iCloud key-value storage. Handoff carries the title you're viewing between devices. |
+- **Tonight** — a home feed with a featured carousel, trending titles, new streaming arrivals, and "Popular on …" rows built from the services you subscribe to.
+- **Where to Watch** — which services stream, rent or sell a title in your region. Your own services are highlighted, and one tap opens the title in that service.
+- **Watchlist** — Want to Watch, Watching, Watched and Dropped, with episode-level progress, 5-star ratings and notes. Filter by service or type; sort by date, title, rating or year.
+- **Planner** — schedule viewing nights on a week view, add them to your calendar, get reminders, and see upcoming episodes of the series you follow.
+- **Shuffle** — can't decide? Filter by mood and time available, then let the deck pick from your watchlist or from what's trending.
+- **Moods** — Cozy, Laughs, Thrills, Feels, Spooky, Brainy.
+- **Sync** — on Apple devices the watchlist, ratings, progress and plans sync through iCloud (SwiftData + CloudKit); settings sync through iCloud key-value storage, and Handoff carries the title you're viewing between devices. Android stores everything on-device and can export/import the same JSON.
 
-Spud, the googly-eyed mascot, is drawn entirely in SwiftUI and blinks at you.
+| iPhone | iPad | iPhone Duo (unfolded) |
+|---|---|---|
+| ![iPhone](docs/screenshots/iphone-tonight.jpg) | ![iPad](docs/screenshots/ipad-tonight.jpg) | ![iPhone Duo](docs/screenshots/duo-tonight.jpg) |
 
-| Title page | Spud Roulette |
-|---|---|
-| ![Title detail](docs/screenshots/detail.jpg) | ![Roulette](docs/screenshots/roulette.jpg) |
+| Title detail (Mac) | Title detail (iPhone) | Android |
+|---|---|---|
+| ![Mac detail](docs/screenshots/mac-detail.jpg) | ![iPhone detail](docs/screenshots/iphone-detail.jpg) | ![Android](docs/screenshots/android-phone.jpg) |
 
 ## Data sources
 
 Couch Potato works out of the box with **no API key**:
 
-- **[TVmaze](https://www.tvmaze.com/api)** provides series, box art, cast, episodes, air dates and which streamer or network each show is on (CC BY-SA).
-- **Apple's iTunes charts and lookup** provide movie box art, charts by genre, and Apple TV Store rent/buy prices.
+- **[TVmaze](https://www.tvmaze.com/api)** — series, artwork, cast, episodes, air dates and the streamer or network each show airs on (CC BY-SA).
+- **Apple's iTunes charts and lookup** — movie artwork, charts by genre, and Apple TV Store rent/buy prices.
 
-Add a free **[TMDB](https://www.themoviedb.org/settings/api) key** to unlock the full catalog: every movie and series, backdrops, trailers, recommendations, and streaming availability across every provider in 17 regions (powered by JustWatch). There are two ways to add it:
+Add a free **[TMDB](https://www.themoviedb.org/settings/api) key** to unlock the full catalog: every movie and series, backdrops, trailers, recommendations, and streaming availability across every provider in 17 regions (powered by JustWatch). Either paste it in **Settings → Data Sources** (on Apple devices it syncs to your other devices through iCloud) or, for the Apple build, copy `Config/Secrets.example.xcconfig` to `Config/Secrets.xcconfig` and set `TMDB_API_KEY` (that file is gitignored).
 
-1. In the app: **Settings → Data sources**. The key syncs to your other devices through iCloud.
-2. At build time: `cp Config/Secrets.example.xcconfig Config/Secrets.xcconfig` and fill in `TMDB_API_KEY`. That file is gitignored.
+> This product uses the TMDB API but is not endorsed or certified by TMDB. Couch Potato isn't affiliated with any streaming service; service names appear as text and monograms, not logos.
 
-When a TMDB key is present, titles from TVmaze and Apple also get enriched with TMDB's all-provider availability.
+## Build
 
-> This product uses the TMDB API but is not endorsed or certified by TMDB. Couch Potato isn't affiliated with any streaming service. Service names appear as plain colored text chips, not logos.
+### Apple (iPhone, iPad, iPhone Duo, Mac)
 
-## Build it
-
-Requirements: Xcode 26+ (built with Xcode 27.1), iOS/iPadOS 18+, macOS 15+, and [XcodeGen](https://github.com/yonaskolb/XcodeGen).
+Requirements: Xcode 26 or later (built with Xcode 27.1), iOS/iPadOS 26+, macOS 26+, and [XcodeGen](https://github.com/yonaskolb/XcodeGen).
 
 ```sh
 brew install xcodegen
@@ -56,7 +52,7 @@ xcodegen
 open CouchPotato.xcodeproj
 ```
 
-Pick the **CouchPotato** scheme and run on an iPhone, iPad or "My Mac". It's a single multiplatform target.
+It's one multiplatform target: pick the **CouchPotato** scheme and run on an iPhone, iPad, iPhone Duo or "My Mac". iPad and Mac get a sidebar; phones get a tab bar, and the iPhone Duo uses its native side-mounted tab bar in both poses.
 
 **iCloud sync** needs a signed build with the `iCloud.com.nearbycoder.couchpotato` CloudKit container. Set your own team in `project.yml` (`DEVELOPMENT_TEAM`), and change the bundle ID and container if you fork. Unsigned or simulator builds fall back to a local store automatically.
 
@@ -67,22 +63,31 @@ xcodebuild test -project CouchPotato.xcodeproj -scheme CouchPotato \
   -destination 'platform=iOS Simulator,name=iPhone 18 Pro' CODE_SIGNING_ALLOWED=NO
 ```
 
+### Android
+
+Requirements: Android Studio (Ladybug or later) or a JDK 17+, Android SDK 37.
+
+```sh
+cd couch-potato/android
+./gradlew :app:installDebug      # or open the android/ folder in Android Studio
+./gradlew :app:testDebugUnitTest
+```
+
+Kotlin + Jetpack Compose + Material 3, Room, DataStore, OkHttp, Coil. Phones get a bottom bar; wide and unfolded layouts get a navigation rail.
+
 ### Deep links
 
-- `couchpotato://title/<source>-<kind>-<id>`, for example `couchpotato://title/tmdb-movie-603` or `couchpotato://title/tvmaze-tv-44933`
-- `couchpotato://roulette`, `couchpotato://planner`, `couchpotato://queue`
+Both apps open `couchpotato://title/<source>-<kind>-<id>` (for example `couchpotato://title/tmdb-movie-603` or `couchpotato://title/tvmaze-tv-44933`), plus `couchpotato://shuffle`, `couchpotato://planner` and `couchpotato://watchlist`.
 
 ## Project layout
 
 ```
-CouchPotato/
-  App/        entry point, root TabView (sidebar on iPad/Mac), theme, navigation model
-  Models/     catalog types, providers, moods, SwiftData models (SavedTitle, CouchNight)
-  Services/   TMDB / TVmaze / iTunes clients, Catalog facade, image pipeline,
-              synced preferences, reminders + calendar, library helpers
-  Views/      Discover, Detail, Library, Planner, Roulette, Search, Settings, Components
-docs/         GitHub Pages site (nearbycoder.github.io/couch-potato)
-design/       app icon source (SVG)
+CouchPotato/       SwiftUI app (App, Models, Services, Views)
+CouchPotatoTests/  unit tests
+android/           Kotlin / Compose app (single :app module)
+design/            app icon source (SVG)
+docs/              GitHub Pages site
+DESIGN.md          the shared design system
 ```
 
-Made with butter and SwiftUI. 🧈
+MIT License.

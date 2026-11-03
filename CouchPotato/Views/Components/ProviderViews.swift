@@ -1,85 +1,133 @@
 import SwiftUI
 
-/// A brand-colored service chip (text only; no third-party logos are bundled).
-struct ProviderChip: View {
+/// A rounded-square service mark: the TMDB logo when available, otherwise a
+/// monogram on the brand color. No third-party logos are bundled.
+struct ProviderTile: View {
     var provider: Provider
     var logoURL: URL?
-    var detail: String?
-    var isMine = false
-    var compact = false
+    var size: CGFloat = 36
+
+    var body: some View {
+        Group {
+            if let logoURL {
+                RemoteImage(url: logoURL, maxPixel: size * 3, placeholderTitle: nil)
+            } else {
+                ZStack {
+                    provider.color
+                    Text(provider.monogram)
+                        .font(.system(size: size * (provider.monogram.count > 2 ? 0.28 : 0.36), weight: .bold, design: .rounded))
+                        .foregroundStyle(provider.color.luminance > 0.6 ? Color.black.opacity(0.85) : .white)
+                        .minimumScaleFactor(0.6)
+                        .padding(2)
+                }
+            }
+        }
+        .frame(width: size, height: size)
+        .artwork(radius: size * 0.24)
+        .accessibilityLabel(provider.name)
+    }
+}
+
+/// A service with its name, used in "Where to Watch".
+struct ProviderOfferView: View {
+    var offer: ProviderOffer
+    var isMine: Bool
+
+    var body: some View {
+        VStack(spacing: 6) {
+            ProviderTile(provider: offer.provider, logoURL: offer.logoURL, size: 48)
+                .overlay(alignment: .bottomTrailing) {
+                    if isMine {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.white, Theme.success)
+                            .offset(x: 4, y: 4)
+                    }
+                }
+            Text(offer.provider.shortName)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(1)
+            if let price = offer.price {
+                Text(price).font(.caption2).foregroundStyle(Theme.textSecondary)
+            }
+        }
+        .frame(width: 72)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(offer.provider.name), \(offer.kind.label)\(offer.price.map { ", \($0)" } ?? "")")
+    }
+}
+
+/// A selectable service row/chip for Settings, onboarding and Browse.
+struct ProviderChip: View {
+    var provider: Provider
+    var isSelected = false
+    var showsCheck = true
+
+    var body: some View {
+        HStack(spacing: 10) {
+            ProviderTile(provider: provider, size: 28)
+            Text(provider.name)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(1)
+            Spacer(minLength: 0)
+            if showsCheck {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(isSelected ? Theme.accent : Theme.textTertiary)
+            } else {
+                Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(Theme.textTertiary)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(isSelected ? Theme.accent.opacity(0.6) : Theme.hairline))
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(provider.name)
+        .accessibilityValue(showsCheck ? (isSelected ? "Selected" : "Not selected") : "")
+    }
+}
+
+extension Color {
+    /// Approximate relative luminance, used to pick legible monogram text.
+    var luminance: Double {
+        #if os(iOS)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        UIColor(self).getRed(&r, green: &g, blue: &b, alpha: &a)
+        #else
+        let c = NSColor(self).usingColorSpace(.sRGB) ?? .gray
+        let r = c.redComponent, g = c.greenComponent, b = c.blueComponent
+        #endif
+        return 0.2126 * Double(r) + 0.7152 * Double(g) + 0.0722 * Double(b)
+    }
+}
+
+/// A 1–5 star rating control.
+struct StarRating: View {
+    @Binding var value: Int
+    var size: CGFloat = 26
+    var editable = true
 
     var body: some View {
         HStack(spacing: 6) {
-            if let logoURL {
-                RemoteImage(url: logoURL, maxPixel: 96, placeholderTitle: nil)
-                    .frame(width: compact ? 18 : 24, height: compact ? 18 : 24)
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-            } else {
-                Text(provider.emoji).font(.system(size: compact ? 12 : 15))
-            }
-            VStack(alignment: .leading, spacing: 0) {
-                Text(provider.shortName)
-                    .font(Spud.display(compact ? 12 : 14, weight: .bold))
-                if let detail {
-                    Text(detail).font(.system(size: 10, weight: .semibold, design: .rounded)).opacity(0.85)
-                }
-            }
-            if isMine {
-                Image(systemName: "checkmark.circle.fill").font(.system(size: compact ? 11 : 13))
-            }
-        }
-        .foregroundStyle(.white)
-        .padding(.horizontal, compact ? 8 : 10)
-        .padding(.vertical, compact ? 5 : 7)
-        .background(provider.color.gradient, in: Capsule())
-        .overlay(Capsule().strokeBorder(.white.opacity(isMine ? 0.9 : 0.15), lineWidth: isMine ? 2 : 1))
-    }
-}
-
-struct ProviderDot: View {
-    var provider: Provider
-
-    var body: some View {
-        Text(provider.shortName)
-            .font(.system(size: 9, weight: .heavy, design: .rounded))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background(provider.color, in: Capsule())
-            .overlay(Capsule().strokeBorder(.white.opacity(0.5), lineWidth: 0.5))
-    }
-}
-
-/// A 1–5 potato rating control.
-struct PotatoRating: View {
-    @Binding var value: Int
-    var size: CGFloat = 28
-    var editable = true
-
-    @State private var bounce: Int?
-
-    var body: some View {
-        HStack(spacing: 4) {
             ForEach(1...5, id: \.self) { i in
-                Text("🥔")
+                Image(systemName: i <= value ? "star.fill" : "star")
                     .font(.system(size: size))
-                    .grayscale(i <= value ? 0 : 1)
-                    .opacity(i <= value ? 1 : 0.3)
-                    .scaleEffect(bounce == i ? 1.35 : 1)
-                    .rotationEffect(.degrees(bounce == i ? -12 : 0))
+                    .foregroundStyle(i <= value ? Theme.accent : Theme.textTertiary)
+                    .contentTransition(.symbolEffect(.replace))
                     .onTapGesture {
                         guard editable else { return }
-                        value = value == i ? 0 : i
-                        withAnimation(.spring(response: 0.25, dampingFraction: 0.4)) { bounce = i }
-                        withAnimation(.spring().delay(0.25)) { bounce = nil }
+                        withAnimation(.snappy) { value = value == i ? 0 : i }
                     }
                     .accessibilityHidden(true)
             }
         }
         .sensoryFeedback(.selection, trigger: value)
         .accessibilityElement()
-        .accessibilityLabel("Potato rating")
-        .accessibilityValue("\(value) of 5 potatoes")
+        .accessibilityLabel("Rating")
+        .accessibilityValue("\(value) of 5 stars")
         .accessibilityAdjustableAction { direction in
             guard editable else { return }
             switch direction {
@@ -92,17 +140,32 @@ struct PotatoRating: View {
 
     static func label(_ value: Int) -> String {
         switch value {
-        case 1: "Mashed it… badly"
-        case 2: "Half-baked"
-        case 3: "Solid spud"
-        case 4: "Loaded & delicious"
-        case 5: "Golden fry of perfection"
-        default: "Tap a potato to rate"
+        case 1: "Not for me"
+        case 2: "It was fine"
+        case 3: "Good"
+        case 4: "Great"
+        case 5: "Favorite"
+        default: "Tap to rate"
         }
     }
 }
 
-/// Loads async content with Spud-themed loading/error states.
+/// Community score, e.g. "★ 7.8".
+struct ScoreLabel: View {
+    var score: Double
+
+    var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "star.fill").font(.caption2)
+            Text(String(format: "%.1f", score))
+        }
+        .font(.footnote.weight(.semibold))
+        .foregroundStyle(Theme.accent)
+        .accessibilityLabel("Score \(String(format: "%.1f", score)) out of 10")
+    }
+}
+
+/// Loads async content with standard loading and error states.
 struct Loadable<Value, Content: View>: View {
     var id: String
     var load: () async throws -> Value
@@ -117,12 +180,10 @@ struct Loadable<Value, Content: View>: View {
             if let value {
                 content(value)
             } else if let error {
-                SpudMessage(title: "Spud tripped over a cable",
-                            message: error.localizedDescription,
-                            expression: .wow,
-                            actionTitle: "Try again") { attempt += 1 }
+                EmptyState(symbol: "wifi.exclamationmark", title: "Couldn't load",
+                           message: error.localizedDescription, actionTitle: "Try Again") { attempt += 1 }
             } else {
-                SpudLoading()
+                LoadingView()
             }
         }
         .task(id: "\(id)#\(attempt)") {
@@ -138,19 +199,85 @@ struct Loadable<Value, Content: View>: View {
     }
 }
 
-struct SpudLoading: View {
-    var label = "Peeling the potatoes…"
-    @State private var spin = false
+struct LoadingView: View {
+    var body: some View {
+        ProgressView()
+            .controlSize(.large)
+            .tint(Theme.textSecondary)
+            .frame(maxWidth: .infinity, minHeight: 160)
+    }
+}
+
+struct EmptyState: View {
+    var symbol: String
+    var title: String
+    var message: String
+    var actionTitle: String?
+    var action: (() -> Void)?
 
     var body: some View {
-        VStack(spacing: 10) {
-            Text("🥔")
-                .font(.system(size: 40))
-                .rotationEffect(.degrees(spin ? 360 : 0))
-                .animation(.linear(duration: 1.1).repeatForever(autoreverses: false), value: spin)
-            Text(label).font(.spudCaption).foregroundStyle(Spud.inkSoft)
+        VStack(spacing: 12) {
+            Image(systemName: symbol)
+                .font(.system(size: 40, weight: .light))
+                .foregroundStyle(Theme.textTertiary)
+                .padding(.bottom, 4)
+            Text(title).font(.headline).foregroundStyle(Theme.textPrimary).multilineTextAlignment(.center)
+            Text(message).font(.footnote).foregroundStyle(Theme.textSecondary).multilineTextAlignment(.center)
+            if let actionTitle, let action {
+                Button(actionTitle, action: action).buttonStyle(.primary).padding(.top, 8)
+            }
         }
-        .frame(maxWidth: .infinity, minHeight: 160)
-        .onAppear { spin = true }
+        .frame(maxWidth: 320)
+        .padding(32)
+        .frame(maxWidth: .infinity)
+    }
+}
+
+/// A simple wrapping layout for chips.
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxWidth = proposal.width ?? .infinity
+        var x: CGFloat = 0, y: CGFloat = 0, rowHeight: CGFloat = 0, widest: CGFloat = 0
+        for view in subviews {
+            let size = view.sizeThatFits(.unspecified)
+            if x > 0 && x + size.width > maxWidth {
+                x = 0
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+            x += size.width + spacing
+            widest = max(widest, x - spacing)
+            rowHeight = max(rowHeight, size.height)
+        }
+        return CGSize(width: min(widest, maxWidth), height: y + rowHeight)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX, y = bounds.minY, rowHeight: CGFloat = 0
+        for view in subviews {
+            let size = view.sizeThatFits(.unspecified)
+            if x > bounds.minX && x + size.width > bounds.maxX {
+                x = bounds.minX
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+            view.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
+        }
+    }
+}
+
+/// "2024 · Drama · 1h 52m" style metadata for a title.
+extension CatalogTitle {
+    var metaLine: String {
+        var bits: [String] = []
+        if let year { bits.append(String(year)) }
+        if let genre = genres.first { bits.append(genre) }
+        if let runtime, runtime > 0 { bits.append(runtime.runtimeLabel) }
+        if kind == .tv, let network, bits.count < 3 { bits.append(network) }
+        return bits.joined(separator: " · ")
     }
 }

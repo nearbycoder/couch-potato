@@ -1,93 +1,100 @@
 import SwiftUI
 import SwiftData
 
-/// A tilt-on-hover poster with a saved-status sticker.
+/// Box art with caption and an optional watchlist status mark.
 struct PosterCard: View {
     var title: CatalogTitle
-    var width: CGFloat = 130
+    var width: CGFloat
     var showsCaption = true
     var status: WatchStatus?
 
     @State private var hovering = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             RemoteImage(url: title.posterURL, maxPixel: width * 3, placeholderTitle: title.name)
                 .frame(width: width, height: width * 1.5)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .artwork()
                 .overlay(alignment: .topTrailing) {
-                    if let status {
-                        Text(status.emoji)
-                            .font(.system(size: 15))
-                            .padding(5)
-                            .background(.thinMaterial, in: Circle())
-                            .padding(6)
-                    }
+                    if let status { StatusMark(status: status).padding(6) }
                 }
-                .overlay(alignment: .bottomLeading) {
-                    if let provider = title.providers.first, provider != .appleStore {
-                        ProviderDot(provider: provider).padding(6)
-                    }
-                }
-                .shadow(color: .black.opacity(hovering ? 0.3 : 0.15), radius: hovering ? 10 : 4, y: hovering ? 8 : 3)
-                .rotationEffect(.degrees(hovering ? -1.5 : 0))
-                .scaleEffect(hovering ? 1.04 : 1)
+                .softShadow(radius: hovering ? 16 : 8, y: hovering ? 10 : 4)
+                .scaleEffect(hovering ? 1.03 : 1)
 
             if showsCaption {
                 Text(title.name)
-                    .font(Spud.display(13, weight: .bold))
-                    .foregroundStyle(Spud.ink)
+                    .font(.posterTitle)
+                    .foregroundStyle(Theme.textPrimary)
                     .lineLimit(1)
                 Text(title.subtitle)
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundStyle(Spud.inkSoft)
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
                     .lineLimit(1)
             }
         }
         .frame(width: width, alignment: .leading)
         .contentShape(Rectangle())
-        .onHover { h in withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { hovering = h } }
+        .onHover { h in withAnimation(.easeOut(duration: 0.2)) { hovering = h } }
         .accessibilityElement(children: .combine)
     }
 }
 
-/// A horizontally scrolling row of posters with a header.
+struct StatusMark: View {
+    var status: WatchStatus
+
+    var body: some View {
+        Image(systemName: status.symbol)
+            .symbolVariant(.fill)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(status.color)
+            .padding(6)
+            .background(.ultraThinMaterial, in: Circle())
+            .accessibilityLabel(status.label)
+    }
+}
+
+/// A horizontally scrolling row of posters with a header and "See All".
 struct PosterRow: View {
     var title: String
     var subtitle: String?
-    var emoji: String?
     var titles: [CatalogTitle]
     var seeAll: Route?
 
+    @Environment(\.layout) private var layout
     @Query private var saved: [SavedTitle]
 
     var body: some View {
         let statusByKey = Dictionary(saved.map { ($0.key, $0.status) }, uniquingKeysWith: { a, _ in a })
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
-                SectionHeader(title: title, subtitle: subtitle, emoji: emoji)
+                SectionHeader(title: title, subtitle: subtitle)
                 if let seeAll {
                     NavigationLink(value: seeAll) {
-                        Text("See all").font(.spudCaption).foregroundStyle(Spud.teal)
+                        HStack(spacing: 2) {
+                            Text("See All")
+                            Image(systemName: "chevron.right").font(.caption.weight(.semibold))
+                        }
+                        .font(.seeAll)
+                        .foregroundStyle(Theme.accent)
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, layout.margin)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(alignment: .top, spacing: 14) {
                     ForEach(titles) { title in
-                        NavigationLink(value: Route.detail(title)) {
-                            PosterCard(title: title, status: statusByKey[title.ref.key])
+                        PosterLink(route: .detail(title)) {
+                            PosterCard(title: title, width: layout.posterWidth, status: statusByKey[title.ref.key])
                         }
-                        .buttonStyle(.plain)
                         .titleContextMenu(title)
                     }
                 }
-                .padding(.horizontal)
-                .padding(.vertical, 6)
+                .padding(.horizontal, layout.margin)
+                .padding(.vertical, 8)
             }
+            .focusEffectDisabled()
         }
     }
 }
@@ -95,26 +102,47 @@ struct PosterRow: View {
 /// An adaptive grid of posters.
 struct PosterGrid: View {
     var titles: [CatalogTitle]
-    var minWidth: CGFloat = Device.isPhone ? 105 : 140
 
+    @Environment(\.layout) private var layout
     @Query private var saved: [SavedTitle]
 
     var body: some View {
         let statusByKey = Dictionary(saved.map { ($0.key, $0.status) }, uniquingKeysWith: { a, _ in a })
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: minWidth), spacing: 14, alignment: .top)], spacing: 18) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: layout.gridMinWidth), spacing: 14, alignment: .top)], spacing: 20) {
             ForEach(titles) { title in
-                NavigationLink(value: Route.detail(title)) {
-                    PosterCard(title: title, width: minWidth, status: statusByKey[title.ref.key])
+                PosterLink(route: .detail(title)) {
+                    GridPoster(title: title, status: statusByKey[title.ref.key])
                 }
-                .buttonStyle(.plain)
                 .titleContextMenu(title)
             }
         }
-        .padding(.horizontal)
+        .padding(.horizontal, layout.margin)
+        .focusEffectDisabled()
     }
 }
 
-/// Quick actions on any poster: queue it, mark it watched, plan it.
+/// A poster that fills its grid cell.
+struct GridPoster: View {
+    var title: CatalogTitle
+    var status: WatchStatus?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            RemoteImage(url: title.posterURL, maxPixel: 500, placeholderTitle: title.name)
+                .aspectRatio(2 / 3, contentMode: .fit)
+                .artwork()
+                .overlay(alignment: .topTrailing) {
+                    if let status { StatusMark(status: status).padding(6) }
+                }
+                .softShadow(radius: 8, y: 4)
+            Text(title.name).font(.posterTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
+            Text(title.subtitle).font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
+        }
+        .contentShape(Rectangle())
+    }
+}
+
+/// Quick actions on any poster.
 struct TitleContextMenu: ViewModifier {
     var title: CatalogTitle
     @Environment(\.modelContext) private var context
@@ -132,14 +160,59 @@ struct TitleContextMenu: ViewModifier {
             Button {
                 app.plan(title)
             } label: {
-                Label("Plan a Couch Night…", systemImage: "calendar.badge.plus")
+                Label("Plan a Night…", systemImage: "calendar.badge.plus")
             }
             ShareLink(item: title.ref.webURL ?? title.ref.deepLink, subject: Text(title.name),
-                      message: Text("Couch Potato says: watch \(title.name) 🥔"))
+                      message: Text("\(title.name) on Couch Potato"))
         }
     }
 }
 
 extension View {
     func titleContextMenu(_ title: CatalogTitle) -> some View { modifier(TitleContextMenu(title: title)) }
+}
+
+/// A mood tile: duotone gradient, symbol and title.
+struct MoodTile: View {
+    var mood: Mood
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            LinearGradient(colors: mood.gradient, startPoint: .topLeading, endPoint: .bottomTrailing)
+            Image(systemName: mood.symbol)
+                .font(.system(size: 22, weight: .regular))
+                .foregroundStyle(.white.opacity(0.9))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .padding(14)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(mood.title).font(.title3.weight(.semibold)).foregroundStyle(.white)
+                Text(mood.blurb).font(.caption).foregroundStyle(.white.opacity(0.78)).lineLimit(1)
+            }
+            .padding(14)
+        }
+        .aspectRatio(16 / 10, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(.white.opacity(0.08)))
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// A navigation push that never takes keyboard focus on macOS, so poster rows
+/// don't show a focus outline when a window opens.
+struct PosterLink<Label: View>: View {
+    var route: Route
+    @ViewBuilder var label: () -> Label
+    @Environment(AppModel.self) private var app
+
+    var body: some View {
+        Button {
+            app.push(route)
+        } label: {
+            label()
+        }
+        .buttonStyle(.plain)
+        .focusable(false)
+        .focusEffectDisabled()
+    }
 }

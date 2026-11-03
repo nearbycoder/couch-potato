@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 import SwiftData
 
 enum WatchStatus: String, CaseIterable, Identifiable, Codable {
@@ -17,28 +17,28 @@ enum WatchStatus: String, CaseIterable, Identifiable, Codable {
 
     var shortLabel: String {
         switch self {
-        case .queued: "Queue"
+        case .queued: "Want"
         case .watching: "Watching"
         case .watched: "Watched"
         case .dropped: "Dropped"
         }
     }
 
-    var emoji: String {
+    var symbol: String {
         switch self {
-        case .queued: "🥔"
-        case .watching: "🍿"
-        case .watched: "✅"
-        case .dropped: "🫠"
+        case .queued: "bookmark"
+        case .watching: "play.circle"
+        case .watched: "checkmark.circle"
+        case .dropped: "minus.circle"
         }
     }
 
-    var symbol: String {
+    var color: Color {
         switch self {
-        case .queued: "bookmark.fill"
-        case .watching: "play.circle.fill"
-        case .watched: "checkmark.seal.fill"
-        case .dropped: "hand.thumbsdown.fill"
+        case .queued: Theme.info
+        case .watching: Theme.accent
+        case .watched: Theme.success
+        case .dropped: Theme.textTertiary
         }
     }
 }
@@ -123,7 +123,7 @@ final class SavedTitle {
 
     var progressLabel: String? {
         guard kind == .tv, lastSeason > 0 else { return nil }
-        return String(format: "Seen through S%02dE%02d", lastSeason, lastEpisode)
+        return String(format: "Watched through S%02dE%02d", lastSeason, lastEpisode)
     }
 
     /// A lightweight catalog value so saved titles can reuse catalog views.

@@ -1,12 +1,13 @@
 import SwiftUI
 import SwiftData
 
-/// Spud Planner: a week of couch nights plus upcoming episodes of followed shows.
+/// A week of planned viewing plus upcoming episodes of followed shows.
 struct PlannerView: View {
     @Environment(\.modelContext) private var context
     @Environment(Catalog.self) private var catalog
     @Environment(Preferences.self) private var prefs
     @Environment(AppModel.self) private var app
+    @Environment(\.layout) private var layout
     @Query(sort: \CouchNight.startsAt) private var nights: [CouchNight]
     @Query(filter: #Predicate<SavedTitle> { $0.isFollowing }) private var followed: [SavedTitle]
 
@@ -21,96 +22,103 @@ struct PlannerView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-                weekStrip.padding(.horizontal)
-                dayAgenda.padding(.horizontal)
-                episodesSection.padding(.horizontal)
+            VStack(alignment: .leading, spacing: 24) {
+                weekStrip.padding(.horizontal, layout.margin)
+                dayAgenda.padding(.horizontal, layout.margin)
+                episodesSection.padding(.horizontal, layout.margin)
             }
             .padding(.vertical)
         }
-        .spudBackground()
-        .navigationTitle("Spud Planner")
+        .appBackground()
+        .navigationTitle("Planner")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button { app.plan(nil) } label: { Label("Plan a Couch Night", systemImage: "plus") }
+                Button { app.plan(nil) } label: { Label("Plan a Night", systemImage: "plus") }
             }
         }
         .task(id: followed.map(\.key).joined()) { await loadUpcoming() }
     }
 
     private var weekStrip: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Button { shiftWeek(-1) } label: { Image(systemName: "chevron.left.circle.fill").font(.title2) }
-                    .accessibilityLabel("Previous week")
-                Spacer()
-                VStack(spacing: 2) {
-                    Text(weekTitle).font(.spudHeadline).foregroundStyle(Spud.ink)
-                    if !Calendar.current.isDate(weekStart, equalTo: .now, toGranularity: .weekOfYear) {
-                        Button("Back to this week") {
-                            weekStart = Calendar.current.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
-                            selectedDay = Calendar.current.startOfDay(for: .now)
-                        }
-                        .font(.spudCaption)
+                Text(weekTitle).font(.sectionTitle).foregroundStyle(Theme.textPrimary)
+                if !Calendar.current.isDate(weekStart, equalTo: .now, toGranularity: .weekOfYear) {
+                    Button("Today") {
+                        weekStart = Calendar.current.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
+                        selectedDay = Calendar.current.startOfDay(for: .now)
                     }
+                    .font(.seeAll)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Theme.accent)
                 }
                 Spacer()
-                Button { shiftWeek(1) } label: { Image(systemName: "chevron.right.circle.fill").font(.title2) }
-                    .accessibilityLabel("Next week")
+                HStack(spacing: 4) {
+                    Button { shiftWeek(-1) } label: { Image(systemName: "chevron.left") }
+                        .accessibilityLabel("Previous week")
+                    Button { shiftWeek(1) } label: { Image(systemName: "chevron.right") }
+                        .accessibilityLabel("Next week")
+                }
+                .buttonStyle(.secondary)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(Spud.teal)
 
-            HStack(spacing: 6) {
+            HStack(spacing: 4) {
                 ForEach(days, id: \.self) { day in
                     let isSelected = Calendar.current.isDate(day, inSameDayAs: selectedDay)
+                    let isToday = Calendar.current.isDateInToday(day)
                     let count = nights(on: day).count
                     let episodeCount = episodes(on: day).count
                     Button {
-                        withAnimation(.spring(response: 0.3)) { selectedDay = day }
+                        withAnimation(.snappy) { selectedDay = day }
                     } label: {
-                        VStack(spacing: 4) {
-                            Text(day.formatted(.dateTime.weekday(.abbreviated))).font(.system(size: 11, weight: .bold, design: .rounded))
-                            Text(day.formatted(.dateTime.day())).font(Spud.display(20))
-                            HStack(spacing: 2) {
-                                ForEach(0..<min(count, 3), id: \.self) { _ in Circle().fill(Spud.ketchup).frame(width: 5) }
-                                ForEach(0..<min(episodeCount, 3), id: \.self) { _ in Circle().fill(Spud.teal).frame(width: 5) }
+                        VStack(spacing: 6) {
+                            Text(day.formatted(.dateTime.weekday(.narrow)))
+                                .font(.caption2.weight(.medium))
+                                .foregroundStyle(Theme.textSecondary)
+                            Text(day.formatted(.dateTime.day()))
+                                .font(.callout.weight(.semibold))
+                                .foregroundStyle(isSelected ? Theme.onAccent : (isToday ? Theme.accent : Theme.textPrimary))
+                                .frame(width: 34, height: 34)
+                                .background(isSelected ? Theme.accent : .clear, in: Circle())
+                            HStack(spacing: 3) {
+                                ForEach(0..<min(count, 3), id: \.self) { _ in Circle().fill(Theme.accent).frame(width: 4) }
+                                ForEach(0..<min(episodeCount, 3), id: \.self) { _ in Circle().fill(Theme.info).frame(width: 4) }
                             }
-                            .frame(height: 6)
+                            .frame(height: 4)
                         }
-                        .foregroundStyle(isSelected ? .white : Spud.ink)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(isSelected ? Spud.brown : (Calendar.current.isDateInToday(day) ? Spud.butter.opacity(0.4) : Spud.card),
-                                    in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .padding(.vertical, 6)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("\(day.formatted(date: .complete, time: .omitted)), \(count) couch nights, \(episodeCount) episodes")
+                    .accessibilityLabel("\(day.formatted(date: .complete, time: .omitted)), \(count) planned, \(episodeCount) episodes")
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
                 }
             }
+            .card(padding: 8)
         }
     }
 
     private var dayAgenda: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: dayTitle, subtitle: "Couch nights", emoji: "🛋️")
+            SectionHeader(title: dayTitle, subtitle: selectedDay.formatted(.dateTime.weekday(.wide).month(.wide).day()))
             let todays = nights(on: selectedDay)
-            if todays.isEmpty {
-                HStack(spacing: 14) {
-                    SpudMascot(size: 56, expression: .sleepy, bobbing: false)
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Nothing planned. The couch is lonely.").font(.spudBody).foregroundStyle(Spud.inkSoft)
-                        Button("Plan a couch night") { app.plan(nil) }.buttonStyle(.chunky(Spud.teal))
-                    }
-                }
-                .spudCard()
-            } else {
-                ForEach(todays) { night in
-                    NightCard(night: night)
-                }
-            }
             let eps = episodes(on: selectedDay)
-            if !eps.isEmpty {
+            if todays.isEmpty && eps.isEmpty {
+                HStack(spacing: 14) {
+                    Image(systemName: "calendar.badge.plus")
+                        .font(.title2)
+                        .foregroundStyle(Theme.textTertiary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Nothing planned").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textPrimary)
+                        Text("Pick something from your watchlist and set a time.").font(.footnote).foregroundStyle(Theme.textSecondary)
+                    }
+                    Spacer()
+                    Button("Plan") { app.plan(nil) }.buttonStyle(.secondary)
+                }
+                .card()
+            } else {
+                ForEach(todays) { night in NightCard(night: night) }
                 ForEach(eps) { ep in EpisodeAgendaRow(episode: ep) }
             }
         }
@@ -118,11 +126,12 @@ struct PlannerView: View {
 
     private var episodesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: "Coming up on shows you follow", subtitle: followed.isEmpty ? "Follow a series (🔔 on its page) to see new episodes here" : nil, emoji: "📅")
+            SectionHeader(title: "Coming Up",
+                          subtitle: followed.isEmpty ? "Follow a series to see its new episodes here" : "New episodes from series you follow")
             if loadingEpisodes && upcoming.isEmpty {
                 ProgressView().frame(maxWidth: .infinity)
             } else if !followed.isEmpty && upcoming.isEmpty {
-                Text("No new episodes on the horizon. Time to binge the backlog!").font(.spudBody).foregroundStyle(Spud.inkSoft)
+                Text("No upcoming episodes scheduled.").font(.subheadline).foregroundStyle(Theme.textSecondary)
             }
             ForEach(upcoming.prefix(20)) { ep in EpisodeAgendaRow(episode: ep, showsDate: true) }
         }
@@ -149,7 +158,7 @@ struct PlannerView: View {
     private var dayTitle: String {
         if Calendar.current.isDateInToday(selectedDay) { return "Tonight" }
         if Calendar.current.isDateInTomorrow(selectedDay) { return "Tomorrow" }
-        return selectedDay.formatted(.dateTime.weekday(.wide).month().day())
+        return selectedDay.formatted(.dateTime.weekday(.wide))
     }
 
     private func loadUpcoming() async {
@@ -179,19 +188,19 @@ struct NightCard: View {
     var body: some View {
         HStack(spacing: 14) {
             RemoteImage(url: night.posterURL, maxPixel: 240, placeholderTitle: night.titleName)
-                .frame(width: 60, height: 90)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .frame(width: 56, height: 84)
+                .artwork(radius: 8)
             VStack(alignment: .leading, spacing: 4) {
-                Text(night.titleName).font(Spud.display(17, weight: .bold)).foregroundStyle(Spud.ink)
+                Text(night.titleName).font(.headline).foregroundStyle(Theme.textPrimary)
                     .strikethrough(night.isDone)
                 Text("\(night.startsAt.formatted(date: .omitted, time: .shortened)) – \(night.endsAt.formatted(date: .omitted, time: .shortened))")
-                    .font(.spudCaption).foregroundStyle(Spud.teal)
+                    .font(.footnote).foregroundStyle(Theme.textSecondary)
                 if !night.note.isEmpty {
-                    Text(night.note).font(.system(size: 12, design: .rounded)).foregroundStyle(Spud.inkSoft).lineLimit(2)
+                    Text(night.note).font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(2)
                 }
                 HStack(spacing: 6) {
-                    if night.remind { Pill(text: "Reminder", systemImage: "bell.fill") }
-                    if night.calendarEventID != nil { Pill(text: "In Calendar", systemImage: "calendar") }
+                    if night.remind { Pill(text: "Reminder", systemImage: "bell") }
+                    if night.calendarEventID != nil { Pill(text: "Calendar", systemImage: "calendar") }
                 }
             }
             Spacer(minLength: 0)
@@ -200,17 +209,17 @@ struct NightCard: View {
                 if night.isDone { Reminders.cancel(night) }
             } label: {
                 Image(systemName: night.isDone ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 28))
-                    .foregroundStyle(night.isDone ? Spud.lettuce : Spud.inkSoft.opacity(0.5))
+                    .font(.system(size: 26))
+                    .foregroundStyle(night.isDone ? Theme.success : Theme.textTertiary)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(night.isDone ? "Done" : "Mark as watched")
             .sensoryFeedback(.success, trigger: night.isDone)
         }
-        .spudCard()
+        .card()
         .contextMenu {
             if let ref = night.ref {
-                Button("Open title", systemImage: "info.circle") { app.open(ref) }
+                Button("Open Title", systemImage: "info.circle") { app.open(ref) }
             }
             Button("Delete", systemImage: "trash", role: .destructive) {
                 Reminders.cancel(night)
@@ -229,25 +238,25 @@ struct EpisodeAgendaRow: View {
             HStack(spacing: 12) {
                 RemoteImage(url: episode.showPosterURL, maxPixel: 200, placeholderTitle: episode.showName)
                     .frame(width: 44, height: 66)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .artwork(radius: 6)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(episode.showName).font(Spud.display(15, weight: .bold)).foregroundStyle(Spud.ink)
-                    Text("\(episode.code) · \(episode.name)").font(.system(size: 13, design: .rounded)).foregroundStyle(Spud.inkSoft).lineLimit(1)
+                    Text(episode.showName).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textPrimary)
+                    Text("\(episode.code) · \(episode.name)").font(.footnote).foregroundStyle(Theme.textSecondary).lineLimit(1)
                     if showsDate, let date = episode.airDate {
                         Text(date.formatted(.dateTime.weekday(.wide).month().day()) + " · " + date.formatted(.relative(presentation: .named)))
-                            .font(.spudCaption).foregroundStyle(Spud.teal)
+                            .font(.caption).foregroundStyle(Theme.info)
                     }
                 }
                 Spacer()
-                Image(systemName: "chevron.right").foregroundStyle(Spud.inkSoft)
+                Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(Theme.textTertiary)
             }
-            .spudCard(Spud.teal.opacity(0.12), padding: 12)
+            .card(padding: 12)
         }
         .buttonStyle(.plain)
     }
 }
 
-/// Sheet for scheduling a couch night.
+/// Sheet for scheduling a viewing night.
 struct PlanNightSheet: View {
     var initialTitle: CatalogTitle?
 
@@ -275,9 +284,9 @@ struct PlanNightSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("What are we watching?") {
+                Section("Title") {
                     if candidates.isEmpty {
-                        Text("Add something to your Couch Queue first — then plan it here.").foregroundStyle(.secondary)
+                        Text("Add something to your watchlist first, then plan it here.").foregroundStyle(.secondary)
                     } else {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 12) {
@@ -287,19 +296,21 @@ struct PlanNightSheet: View {
                                         if let runtime = title.runtime, runtime > 0 { duration = title.kind == .movie ? runtime + 15 : max(60, runtime * 2) }
                                     } label: {
                                         PosterCard(title: title, width: 84, showsCaption: false)
-                                            .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Spud.ketchup, lineWidth: pickedKey == title.ref.key ? 4 : 0))
+                                            .overlay(RoundedRectangle(cornerRadius: Theme.posterRadius, style: .continuous)
+                                                .strokeBorder(Theme.accent, lineWidth: pickedKey == title.ref.key ? 3 : 0))
                                             .opacity(pickedKey == nil || pickedKey == title.ref.key ? 1 : 0.5)
                                     }
                                     .buttonStyle(.plain)
                                     .accessibilityLabel(title.name)
+                                    .accessibilityAddTraits(pickedKey == title.ref.key ? .isSelected : [])
                                 }
                             }
                             .padding(.vertical, 6)
                         }
-                        if let picked { Text(picked.name).font(.spudHeadline) }
+                        if let picked { Text(picked.name).font(.headline) }
                     }
                 }
-                Section("When?") {
+                Section("When") {
                     DatePicker("Starts", selection: $startsAt, in: Date.now.addingTimeInterval(-3600)...)
                     Stepper(value: $duration, in: 20...480, step: 10) {
                         LabeledContent("Length", value: duration.runtimeLabel)
@@ -307,24 +318,24 @@ struct PlanNightSheet: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack {
                             ForEach(quickTimes, id: \.0) { label, date in
-                                Button(label) { startsAt = date }.buttonStyle(.bordered).tint(Spud.teal)
+                                Button(label) { startsAt = date }.buttonStyle(.bordered).tint(Theme.accent)
                             }
                         }
                     }
                 }
-                Section("Extras") {
-                    TextField("Snack plan, who's coming…", text: $note, axis: .vertical)
-                    Toggle("Remind me \(prefs.remindMinutesBefore) min before", isOn: $remind)
+                Section("Options") {
+                    TextField("Note", text: $note, prompt: Text("Add a note"), axis: .vertical)
+                    Toggle("Remind me \(prefs.remindMinutesBefore) minutes before", isOn: $remind)
                     Toggle("Add to Calendar", isOn: $addToCalendar)
                 }
             }
             .formStyle(.grouped)
-            .navigationTitle("Plan a Couch Night")
+            .navigationTitle("Plan a Night")
             .inlineTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Plan it 🥔") { Task { await save() } }
+                    Button("Save") { Task { await save() } }
                         .disabled(picked == nil || saving)
                 }
             }
@@ -348,9 +359,9 @@ struct PlanNightSheet: View {
         var saturday = cal.nextDate(after: .now, matching: DateComponents(hour: 19, weekday: 7), matchingPolicy: .nextTime)!
         if saturday < .now { saturday = cal.date(byAdding: .weekOfYear, value: 1, to: saturday)! }
         var list: [(String, Date)] = []
-        if tonight > .now { list.append(("Tonight 8pm", tonight)) }
-        list.append(("Tomorrow 8pm", tomorrow))
-        list.append(("Saturday 7pm", saturday))
+        if tonight > .now { list.append(("Tonight 8 PM", tonight)) }
+        list.append(("Tomorrow 8 PM", tomorrow))
+        list.append(("Saturday 7 PM", saturday))
         return list
     }
 

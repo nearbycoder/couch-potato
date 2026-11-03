@@ -8,10 +8,10 @@ enum AppTab: String, Hashable, CaseIterable {
     var title: String {
         switch self {
         case .tonight: "Tonight"
-        case .search: "Search"
-        case .queue: "Couch Queue"
+        case .search: "Browse"
+        case .queue: "Watchlist"
         case .planner: "Planner"
-        case .roulette: "Roulette"
+        case .roulette: "Shuffle"
         case .settings: "Settings"
         case .service: "Service"
         }
@@ -19,12 +19,12 @@ enum AppTab: String, Hashable, CaseIterable {
 
     var symbol: String {
         switch self {
-        case .tonight: "sparkles.tv"
+        case .tonight: "play.rectangle.on.rectangle"
         case .search: "magnifyingglass"
-        case .queue: "sofa.fill"
+        case .queue: "bookmark"
         case .planner: "calendar"
-        case .roulette: "dice.fill"
-        case .settings: "gearshape.fill"
+        case .roulette: "shuffle"
+        case .settings: "gearshape"
         case .service: "play.tv"
         }
     }
@@ -58,6 +58,11 @@ final class AppModel {
         Binding(get: { self.paths[tab] ?? NavigationPath() }, set: { self.paths[tab] = $0 })
     }
 
+    func push(_ route: Route) {
+        if selection == .tab(.settings) { selection = .tab(.tonight) }
+        paths[selection, default: NavigationPath()].append(route)
+    }
+
     func open(_ ref: TitleRef) {
         // Stay on the current tab when it can push; settings has no stack on Mac.
         if selection == .tab(.settings) { selection = .tab(.tonight) }
@@ -69,9 +74,9 @@ final class AppModel {
         switch url.host {
         case "title":
             if let ref = TitleRef(key: url.lastPathComponent) { open(ref) }
-        case "roulette": selection = .tab(.roulette)
+        case "roulette", "shuffle": selection = .tab(.roulette)
         case "planner": selection = .tab(.planner)
-        case "queue": selection = .tab(.queue)
+        case "queue", "watchlist": selection = .tab(.queue)
         default: break
         }
     }

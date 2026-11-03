@@ -33,7 +33,6 @@ struct CouchPotatoApp: App {
                 .environment(prefs)
                 .environment(catalog)
                 .environment(app)
-                .fontDesign(.rounded)
         }
         .modelContainer(container)
         #if os(macOS)
@@ -41,17 +40,17 @@ struct CouchPotatoApp: App {
         #endif
         .commands {
             CommandGroup(after: .newItem) {
-                Button("Plan a Couch Night…") { app.plan(nil) }
+                Button("Plan a Night…") { app.plan(nil) }
                     .keyboardShortcut("n", modifiers: [.command, .shift])
             }
-            CommandMenu("Couch") {
+            CommandMenu("Go") {
                 Button("Tonight") { app.selection = .tab(.tonight) }.keyboardShortcut("1")
-                Button("Search") { app.selection = .tab(.search) }.keyboardShortcut("f")
-                Button("Couch Queue") { app.selection = .tab(.queue) }.keyboardShortcut("2")
+                Button("Watchlist") { app.selection = .tab(.queue) }.keyboardShortcut("2")
                 Button("Planner") { app.selection = .tab(.planner) }.keyboardShortcut("3")
-                Button("Spud Roulette") { app.selection = .tab(.roulette) }.keyboardShortcut("4")
+                Button("Shuffle") { app.selection = .tab(.roulette) }.keyboardShortcut("4")
+                Button("Browse") { app.selection = .tab(.search) }.keyboardShortcut("f")
                 Divider()
-                Button("Refresh Catalog") { catalog.reset() }.keyboardShortcut("r", modifiers: [.command, .shift])
+                Button("Refresh") { catalog.reset() }.keyboardShortcut("r", modifiers: [.command, .shift])
             }
         }
 
@@ -61,7 +60,7 @@ struct CouchPotatoApp: App {
                 .environment(prefs)
                 .environment(catalog)
                 .environment(app)
-                .frame(width: 560, height: 720)
+                .frame(width: 600, height: 760)
                 .modelContainer(container)
         }
         #endif

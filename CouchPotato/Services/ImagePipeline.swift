@@ -83,23 +83,18 @@ struct RemoteImage: View {
 struct PosterPlaceholder: View {
     var title: String?
 
-    private var tint: Color {
-        let palette = [Spud.potato, Spud.teal, Spud.ketchup, Spud.grape, Spud.lettuce]
-        let seed = (title ?? "").unicodeScalars.reduce(0) { $0 &+ Int($1.value) }
-        return palette[abs(seed) % palette.count]
-    }
-
     var body: some View {
         ZStack {
-            LinearGradient(colors: [tint.opacity(0.85), tint.mix(with: .black, by: 0.3)],
-                           startPoint: .topLeading, endPoint: .bottomTrailing)
-            VStack(spacing: 6) {
-                Text("🥔").font(.system(size: 30))
+            Theme.surfaceElevated
+            VStack(spacing: 8) {
+                Image(systemName: "film")
+                    .font(.title2)
+                    .foregroundStyle(Theme.textTertiary)
                 if let title {
                     Text(title)
-                        .font(Spud.display(13, weight: .bold))
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Theme.textSecondary)
                         .multilineTextAlignment(.center)
-                        .foregroundStyle(.white)
                         .lineLimit(3)
                         .padding(.horizontal, 8)
                 }

@@ -1,86 +1,97 @@
 import SwiftUI
 
-struct SearchView: View {
+/// Search plus browse-by-service and browse-by-mood.
+struct BrowseView: View {
     @Environment(Catalog.self) private var catalog
     @Environment(Preferences.self) private var prefs
+    @Environment(\.layout) private var layout
     @State private var query = ""
     @State private var results: [CatalogTitle] = []
     @State private var isSearching = false
     @State private var kind: MediaKind?
 
-    private let suggestions = ["Severance", "The Bear", "Dune", "Bluey", "Only Murders", "Paddington", "Shōgun", "The Office"]
+    private let suggestions = ["Severance", "The Bear", "Dune", "Shōgun", "Paddington", "Only Murders in the Building", "Andor", "The Office"]
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 24) {
                 if query.trimmingCharacters(in: .whitespaces).count < 2 {
                     idle
                 } else if isSearching && results.isEmpty {
-                    SpudLoading(label: "Rummaging through the couch cushions…")
+                    LoadingView()
                 } else if results.isEmpty {
-                    SpudMessage(title: "No spuds found", message: "Nothing matched “\(query)”. Check the spelling, or try a shorter title.", expression: .wow)
+                    EmptyState(symbol: "magnifyingglass", title: "No results",
+                               message: "Nothing matched “\(query)”. Check the spelling or try a shorter title.")
                 } else {
-                    KindPicker(kind: $kind).padding(.horizontal)
+                    KindPicker(kind: $kind).padding(.horizontal, layout.margin)
                     PosterGrid(titles: results.filter { kind == nil || $0.kind == kind })
                 }
             }
             .padding(.vertical)
         }
-        .spudBackground()
-        .navigationTitle("Search")
-        .searchable(text: $query, placement: .automatic, prompt: "Movies, shows, guilty pleasures…")
+        .appBackground()
+        .navigationTitle("Browse")
+        .searchable(text: $query, placement: .automatic, prompt: "Movies and series")
         .task(id: query) {
             let text = query
             guard text.trimmingCharacters(in: .whitespaces).count >= 2 else { results = []; return }
-            try? await Task.sleep(for: .milliseconds(350)) // debounce
+            try? await Task.sleep(for: .milliseconds(350))
             guard !Task.isCancelled else { return }
             isSearching = true
             let found = (try? await catalog.search(text)) ?? []
             guard !Task.isCancelled else { return }
-            results = prefs.onlyMyServices && catalog.hasTMDB == false
-                ? found.filter { $0.providers.isEmpty || $0.providers.contains(where: prefs.isMine) }
-                : found
+            results = found
             isSearching = false
         }
     }
 
     private var idle: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            HStack(spacing: 14) {
-                SpudMascot(size: 70, expression: .wow, gaze: 0.6)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("What are we hunting for?").font(.spudHeadline).foregroundStyle(Spud.ink)
-                    Text(catalog.hasTMDB ? "Every movie and series, across every service." : "Series via TVmaze, movies from Apple's charts. Add a TMDB key for everything.")
-                        .font(.spudBody).foregroundStyle(Spud.inkSoft)
-                }
-            }
-            .padding(.horizontal)
+        idleContent.focusEffectDisabled()
+    }
 
-            VStack(alignment: .leading, spacing: 10) {
-                SectionHeader(title: "Try one of these", emoji: "💡")
+    private var idleContent: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeader(title: "Suggestions")
                 FlowLayout(spacing: 8) {
                     ForEach(suggestions, id: \.self) { s in
-                        Button { query = s } label: { Pill(text: s, systemImage: "magnifyingglass", color: Spud.card) }
+                        Button { query = s } label: { Pill(text: s, systemImage: "magnifyingglass") }
                             .buttonStyle(.plain)
                     }
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, layout.margin)
 
-            VStack(alignment: .leading, spacing: 10) {
-                SectionHeader(title: "Browse by service", emoji: "📺")
-                FlowLayout(spacing: 8) {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeader(title: "Services", subtitle: prefs.myServices.isEmpty ? nil : "Yours are marked")
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: layout.isCompact ? 160 : 200), spacing: 10)], spacing: 10) {
                     ForEach(Provider.streamers) { p in
                         NavigationLink(value: Route.provider(p)) {
-                            ProviderChip(provider: p, isMine: prefs.isMine(p))
+                            ProviderChip(provider: p, isSelected: prefs.isMine(p), showsCheck: prefs.isMine(p))
                         }
                         .buttonStyle(.plain)
                     }
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, layout.margin)
 
-            MoodStrip().padding(.horizontal)
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeader(title: "Moods")
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: layout.moodColumns), spacing: 12) {
+                    ForEach(Mood.allCases) { mood in
+                        NavigationLink(value: Route.mood(mood)) { MoodTile(mood: mood) }
+                            .buttonStyle(.plain)
+                    }
+                }
+            }
+            .padding(.horizontal, layout.margin)
+
+            if !catalog.hasTMDB {
+                Text("Series search is powered by TVmaze; movie search covers Apple's charts. Add a TMDB API key in Settings to search everything.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textTertiary)
+                    .padding(.horizontal, layout.margin)
+            }
         }
     }
 }

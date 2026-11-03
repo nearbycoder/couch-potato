@@ -4,28 +4,32 @@ struct MoodView: View {
     var mood: Mood
     @Environment(Catalog.self) private var catalog
     @Environment(Preferences.self) private var prefs
+    @Environment(\.layout) private var layout
     @State private var kind: MediaKind?
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                HStack(spacing: 14) {
-                    Text(mood.emoji).font(.system(size: 54))
-                    VStack(alignment: .leading) {
-                        Text(mood.title).font(.spudTitle).foregroundStyle(Spud.ink)
-                        Text(mood.blurb).font(.spudBody).foregroundStyle(Spud.inkSoft)
+            VStack(alignment: .leading, spacing: 20) {
+                ZStack(alignment: .bottomLeading) {
+                    LinearGradient(colors: mood.gradient, startPoint: .topLeading, endPoint: .bottomTrailing)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Image(systemName: mood.symbol).font(.title2).foregroundStyle(.white.opacity(0.9)).padding(.bottom, 6)
+                        Text(mood.title).font(.title.bold()).foregroundStyle(.white)
+                        Text(mood.blurb).font(.subheadline).foregroundStyle(.white.opacity(0.8))
                     }
+                    .padding(20)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .spudCard(mood.color.opacity(0.25))
-                .padding(.horizontal)
+                .frame(height: 150)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .padding(.horizontal, layout.margin)
 
-                KindPicker(kind: $kind).padding(.horizontal)
+                KindPicker(kind: $kind).padding(.horizontal, layout.margin)
 
                 Loadable(id: "mood-\(mood.id)-\(kind?.rawValue ?? "all")-\(prefs.region)-\(catalog.hasTMDB)-\(prefs.onlyMyServices)",
                          load: { try await catalog.mood(mood, kind: kind) }) { titles in
                     if titles.isEmpty {
-                        SpudMessage(title: "Nothing in this mood… yet", message: "Spud came up empty. Try another vibe or add a TMDB key in Settings.", expression: .sleepy)
+                        EmptyState(symbol: "rectangle.on.rectangle.slash", title: "Nothing here yet",
+                                   message: "Try another mood, or add a TMDB API key in Settings for the full catalog.")
                     } else {
                         PosterGrid(titles: titles)
                     }
@@ -33,7 +37,7 @@ struct MoodView: View {
             }
             .padding(.vertical)
         }
-        .spudBackground()
+        .appBackground()
         .navigationTitle(mood.title)
         .inlineTitle()
     }
@@ -43,35 +47,40 @@ struct ProviderView: View {
     var provider: Provider
     @Environment(Catalog.self) private var catalog
     @Environment(Preferences.self) private var prefs
+    @Environment(\.layout) private var layout
     @State private var kind: MediaKind?
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("\(provider.emoji) \(provider.name)")
-                            .font(.spudTitle)
-                            .foregroundStyle(.white)
-                        Text(prefs.isMine(provider) ? "One of your services ✓" : "Not one of your services (yet)")
-                            .font(.spudCaption)
-                            .foregroundStyle(.white.opacity(0.85))
+            VStack(alignment: .leading, spacing: 20) {
+                HStack(spacing: 14) {
+                    ProviderTile(provider: provider, size: 56)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(provider.name).font(.title2.weight(.semibold)).foregroundStyle(Theme.textPrimary)
+                        Text(prefs.isMine(provider) ? "One of your services" : "Not in your services")
+                            .font(.footnote).foregroundStyle(Theme.textSecondary)
                     }
                     Spacer()
-                    Button(prefs.isMine(provider) ? "Remove" : "I have this") { prefs.toggle(provider) }
-                        .buttonStyle(.chunky(.white, foreground: provider.color))
+                    Button {
+                        prefs.toggle(provider)
+                        catalog.reset()
+                    } label: {
+                        Label(prefs.isMine(provider) ? "Added" : "Add", systemImage: prefs.isMine(provider) ? "checkmark" : "plus")
+                    }
+                    .buttonStyle(.secondary)
                 }
-                .spudCard(provider.color)
-                .padding(.horizontal)
+                .card()
+                .padding(.horizontal, layout.margin)
 
-                if catalog.hasTMDB { KindPicker(kind: $kind).padding(.horizontal) }
+                if catalog.hasTMDB { KindPicker(kind: $kind).padding(.horizontal, layout.margin) }
 
                 Loadable(id: "svc-\(provider.id)-\(kind?.rawValue ?? "all")-\(prefs.region)-\(catalog.hasTMDB)",
                          load: { try await catalog.onService(provider, kind: kind) }) { titles in
                     if titles.isEmpty {
-                        SpudMessage(title: "Spud's search came up dry",
-                                    message: catalog.hasTMDB ? "Nothing found for \(provider.name) in \(prefs.region)." : "Without a TMDB key Spud only sees shows airing this week. Add a free key in Settings to browse the full \(provider.name) catalog.",
-                                    expression: .sleepy)
+                        EmptyState(symbol: "play.tv", title: "Nothing to show",
+                                   message: catalog.hasTMDB
+                                   ? "No titles found for \(provider.name) in \(prefs.region)."
+                                   : "Without a TMDB API key only series airing this week are visible. Add a free key in Settings to browse the full \(provider.name) catalog.")
                     } else {
                         PosterGrid(titles: titles)
                     }
@@ -79,7 +88,7 @@ struct ProviderView: View {
             }
             .padding(.vertical)
         }
-        .spudBackground()
+        .appBackground()
         .navigationTitle(provider.name)
         .inlineTitle()
     }
@@ -93,7 +102,7 @@ struct TitleListView: View {
         ScrollView {
             PosterGrid(titles: titles).padding(.vertical)
         }
-        .spudBackground()
+        .appBackground()
         .navigationTitle(title)
         .inlineTitle()
     }
@@ -104,13 +113,13 @@ struct KindPicker: View {
 
     var body: some View {
         Picker("Type", selection: $kind) {
-            Text("Everything").tag(MediaKind?.none)
+            Text("All").tag(MediaKind?.none)
             Text("Movies").tag(MediaKind?.some(.movie))
             Text("Series").tag(MediaKind?.some(.tv))
         }
         .pickerStyle(.segmented)
         .labelsHidden()
-        .frame(maxWidth: 360)
+        .frame(maxWidth: 320)
     }
 }
 

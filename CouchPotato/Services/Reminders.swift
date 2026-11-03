@@ -18,10 +18,10 @@ enum Reminders {
         let fireDate = night.startsAt.addingTimeInterval(TimeInterval(-minutesBefore * 60))
         guard fireDate > .now, await requestPermission() else { return }
         let content = UNMutableNotificationContent()
-        content.title = "Couch time! 🛋️"
+        content.title = "Time to watch"
         content.body = minutesBefore > 0
-            ? "\(night.titleName) starts in \(minutesBefore) minutes. Grab the snacks."
-            : "\(night.titleName) is on. Assume the position."
+            ? "\(night.titleName) starts in \(minutesBefore) minutes."
+            : "\(night.titleName) is starting now."
         content.sound = .default
         content.userInfo = ["titleKey": night.titleKey]
         let trigger = UNCalendarNotificationTrigger(
@@ -40,8 +40,8 @@ enum Reminders {
         let parts = Calendar.current.dateComponents([.hour, .minute], from: airDate)
         if parts.hour == 0 && parts.minute == 0 { fire = Calendar.current.date(bySettingHour: 18, minute: 0, second: 0, of: airDate) ?? airDate }
         let content = UNMutableNotificationContent()
-        content.title = "Fresh episode: \(episode.showName) 🥔"
-        content.body = "\(episode.code) · \(episode.name) is out. Your couch misses you."
+        content.title = "New episode: \(episode.showName)"
+        content.body = "\(episode.code) · \(episode.name) is out now."
         content.sound = .default
         content.userInfo = ["titleKey": episode.showRef.key]
         let trigger = UNCalendarNotificationTrigger(
@@ -58,10 +58,10 @@ enum CalendarBridge {
     static func add(_ night: CouchNight) async -> String? {
         guard (try? await store.requestWriteOnlyAccessToEvents()) == true else { return nil }
         let event = EKEvent(eventStore: store)
-        event.title = "🛋️ \(night.titleName)"
+        event.title = night.titleName
         event.startDate = night.startsAt
         event.endDate = night.endsAt
-        event.notes = [night.note, "Planned with Couch Potato 🥔"].filter { !$0.isEmpty }.joined(separator: "\n\n")
+        event.notes = [night.note, "Planned with Couch Potato"].filter { !$0.isEmpty }.joined(separator: "\n\n")
         event.url = TitleRef(key: night.titleKey)?.deepLink
         event.calendar = store.defaultCalendarForNewEvents
         do {

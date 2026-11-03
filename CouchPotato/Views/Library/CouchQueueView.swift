@@ -1,10 +1,11 @@
 import SwiftUI
 import SwiftData
 
-struct CouchQueueView: View {
+struct WatchlistView: View {
     @Environment(\.modelContext) private var context
     @Environment(Preferences.self) private var prefs
     @Environment(AppModel.self) private var app
+    @Environment(\.layout) private var layout
     @Query(sort: \SavedTitle.addedAt, order: .reverse) private var saved: [SavedTitle]
 
     @State private var status: WatchStatus = .queued
@@ -14,7 +15,7 @@ struct CouchQueueView: View {
     @State private var searchText = ""
 
     enum Sort: String, CaseIterable, Identifiable {
-        case recent = "Recently added", name = "A to Z", rating = "Most potatoes", year = "Newest"
+        case recent = "Recently Added", name = "Title", rating = "Rating", year = "Year"
         var id: String { rawValue }
     }
 
@@ -35,29 +36,31 @@ struct CouchQueueView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                statusTabs.padding(.horizontal)
-                filters.padding(.horizontal)
+                statusTabs.padding(.horizontal, layout.margin)
+                filters.padding(.horizontal, layout.margin)
 
                 if filtered.isEmpty {
                     emptyState
                 } else {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: Device.isPhone ? 105 : 150), spacing: 14, alignment: .top)], spacing: 20) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: layout.gridMinWidth), spacing: 14, alignment: .top)], spacing: 20) {
                         ForEach(filtered) { item in
                             NavigationLink(value: Route.title(item.ref, preview: item.asCatalogTitle)) {
-                                QueueCard(item: item)
+                                WatchlistCard(item: item)
                             }
                             .buttonStyle(.plain)
+                            .focusable(false)
                             .contextMenu { menu(for: item) }
                         }
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, layout.margin)
+                    .focusEffectDisabled()
                 }
             }
             .padding(.vertical)
         }
-        .spudBackground()
-        .navigationTitle("Couch Queue")
-        .searchable(text: $searchText, prompt: "Filter your couch")
+        .appBackground()
+        .navigationTitle("Watchlist")
+        .searchable(text: $searchText, prompt: "Filter")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
@@ -76,23 +79,22 @@ struct CouchQueueView: View {
             HStack(spacing: 8) {
                 ForEach(WatchStatus.allCases) { s in
                     let count = saved.filter { $0.status == s }.count
+                    let selected = status == s
                     Button {
-                        withAnimation(.spring(response: 0.3)) { status = s }
+                        withAnimation(.snappy) { status = s }
                     } label: {
                         HStack(spacing: 6) {
-                            Text(s.emoji)
-                            Text(s.shortLabel)
-                            Text("\(count)")
-                                .font(.system(size: 11, weight: .heavy, design: .rounded))
-                                .padding(.horizontal, 6).padding(.vertical, 2)
-                                .background(.white.opacity(0.35), in: Capsule())
+                            Circle().fill(s.color).frame(width: 7, height: 7)
+                            Text(s.label)
+                            Text("\(count)").foregroundStyle(selected ? Theme.bg.opacity(0.7) : Theme.textTertiary)
                         }
-                        .font(Spud.display(15, weight: .bold))
-                        .foregroundStyle(status == s ? .white : Spud.ink)
-                        .padding(.horizontal, 14).padding(.vertical, 9)
-                        .background(status == s ? Spud.brown : Spud.card, in: Capsule())
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(selected ? Theme.bg : Theme.textPrimary)
+                        .padding(.horizontal, 14).padding(.vertical, 8)
+                        .background(selected ? Theme.textPrimary : Theme.fill, in: Capsule())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityAddTraits(selected ? .isSelected : [])
                 }
             }
             .padding(.vertical, 2)
@@ -102,14 +104,20 @@ struct CouchQueueView: View {
     private var filters: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                KindPicker(kind: $kind).frame(width: 260)
+                KindPicker(kind: $kind).frame(width: 240)
                 let providers = Provider.all.filter { p in saved.contains { $0.providerIDs.contains(p.id) } }
                 ForEach(providers) { p in
                     Button {
                         serviceFilter = serviceFilter == p.id ? nil : p.id
                     } label: {
-                        ProviderChip(provider: p, isMine: serviceFilter == p.id, compact: true)
-                            .opacity(serviceFilter == nil || serviceFilter == p.id ? 1 : 0.45)
+                        HStack(spacing: 6) {
+                            ProviderTile(provider: p, size: 20)
+                            Text(p.shortName).font(.caption.weight(.medium)).foregroundStyle(Theme.textPrimary)
+                        }
+                        .padding(.horizontal, 8).padding(.vertical, 5)
+                        .background(Theme.fill, in: Capsule())
+                        .overlay(Capsule().strokeBorder(serviceFilter == p.id ? Theme.accent : .clear))
+                        .opacity(serviceFilter == nil || serviceFilter == p.id ? 1 : 0.5)
                     }
                     .buttonStyle(.plain)
                 }
@@ -121,14 +129,18 @@ struct CouchQueueView: View {
     private var emptyState: some View {
         switch status {
         case .queued:
-            SpudMessage(title: "Your couch is empty!", message: "Find something good on Tonight or Search and tap “Add to Couch Queue”. Spud will keep it warm.",
-                        expression: .wow, actionTitle: "Find something") { app.selection = .tab(.tonight) }
+            EmptyState(symbol: "bookmark", title: "Your watchlist is empty",
+                       message: "Find something on Tonight or Browse and add it here.",
+                       actionTitle: "Browse") { app.selection = .tab(.search) }
         case .watching:
-            SpudMessage(title: "Nothing in progress", message: "Start something from your queue — Spud will track every episode.", expression: .sleepy)
+            EmptyState(symbol: "play.circle", title: "Nothing in progress",
+                       message: "Start something from your watchlist and track every episode here.")
         case .watched:
-            SpudMessage(title: "No trophies yet", message: "Mark things watched to climb from Raw Spud to Mashed Royalty.", expression: .happy)
+            EmptyState(symbol: "checkmark.circle", title: "Nothing watched yet",
+                       message: "Mark titles as watched to build your history and level up.")
         case .dropped:
-            SpudMessage(title: "No regrets here", message: "Things you gave up on land here. Life's too short for bad TV.", expression: .wink)
+            EmptyState(symbol: "minus.circle", title: "Nothing dropped",
+                       message: "Titles you gave up on will appear here.")
         }
     }
 
@@ -137,39 +149,48 @@ struct CouchQueueView: View {
         ForEach(WatchStatus.allCases) { s in
             Button { item.status = s } label: { Label(s.label, systemImage: s.symbol) }
         }
-        Button { app.plan(item.asCatalogTitle) } label: { Label("Plan a Couch Night…", systemImage: "calendar.badge.plus") }
+        Button { app.plan(item.asCatalogTitle) } label: { Label("Plan a Night…", systemImage: "calendar.badge.plus") }
         Divider()
         Button("Remove", systemImage: "trash", role: .destructive) { context.delete(item) }
     }
 }
 
-struct QueueCard: View {
+struct WatchlistCard: View {
     var item: SavedTitle
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             RemoteImage(url: item.posterURL, maxPixel: 500, placeholderTitle: item.name)
                 .aspectRatio(2 / 3, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .artwork()
                 .overlay(alignment: .topLeading) {
-                    if let p = item.providers.first(where: { $0 != .appleStore }) { ProviderDot(provider: p).padding(6) }
-                }
-                .overlay(alignment: .bottomTrailing) {
-                    if item.isFollowing {
-                        Image(systemName: "bell.fill").font(.system(size: 11)).foregroundStyle(.white)
-                            .padding(6).background(Spud.teal, in: Circle()).padding(6)
+                    if let p = item.providers.first(where: { $0 != .appleStore }) {
+                        ProviderTile(provider: p, size: 22).padding(6)
                     }
                 }
-                .shadow(color: .black.opacity(0.15), radius: 4, y: 3)
-            Text(item.name).font(Spud.display(13, weight: .bold)).foregroundStyle(Spud.ink).lineLimit(1)
+                .overlay(alignment: .topTrailing) {
+                    if item.isFollowing {
+                        Image(systemName: "bell.fill").font(.caption2).foregroundStyle(Theme.textPrimary)
+                            .padding(6).background(.ultraThinMaterial, in: Circle()).padding(6)
+                    }
+                }
+                .softShadow(radius: 8, y: 4)
+            Text(item.name).font(.posterTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
             if item.potatoes > 0 {
-                Text(String(repeating: "🥔", count: item.potatoes)).font(.system(size: 11))
+                HStack(spacing: 2) {
+                    ForEach(1...5, id: \.self) { i in
+                        Image(systemName: i <= item.potatoes ? "star.fill" : "star")
+                            .font(.system(size: 9))
+                            .foregroundStyle(i <= item.potatoes ? Theme.accent : Theme.textTertiary)
+                    }
+                }
             } else if let progress = item.progressLabel {
-                Text(progress).font(.system(size: 11, design: .rounded)).foregroundStyle(Spud.teal).lineLimit(1)
+                Text(progress).font(.caption).foregroundStyle(Theme.success).lineLimit(1)
             } else {
                 Text([item.year.map(String.init), item.kind.label].compactMap { $0 }.joined(separator: " · "))
-                    .font(.system(size: 11, design: .rounded)).foregroundStyle(Spud.inkSoft)
+                    .font(.caption).foregroundStyle(Theme.textSecondary)
             }
         }
+        .contentShape(Rectangle())
     }
 }

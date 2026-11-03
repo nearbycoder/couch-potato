@@ -18,59 +18,56 @@ struct SettingsView: View {
         @Bindable var prefs = prefs
         Form {
             Section {
-                RankCard(rank: CouchRank(titles: saved, nights: nights), saved: saved)
+                StatsCard(rank: CouchRank(titles: saved, nights: nights), saved: saved)
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
             }
 
-            Section {
-                TextField("Nickname", text: $prefs.nickname, prompt: Text("What should Spud call you?"))
-            } header: {
-                Text("You")
+            Section("Profile") {
+                TextField("Name", text: $prefs.nickname, prompt: Text("Your name"))
             }
 
             Section {
-                FlowLayout(spacing: 8) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], spacing: 8) {
                     ForEach(Provider.streamers) { provider in
                         Button {
-                            withAnimation(.spring(response: 0.3)) { prefs.toggle(provider) }
+                            withAnimation(.snappy) { prefs.toggle(provider) }
                             catalog.reset()
                         } label: {
-                            ProviderChip(provider: provider, isMine: prefs.isMine(provider))
-                                .opacity(prefs.isMine(provider) ? 1 : 0.45)
-                                .scaleEffect(prefs.isMine(provider) ? 1 : 0.95)
+                            ProviderChip(provider: provider, isSelected: prefs.isMine(provider))
                         }
                         .buttonStyle(.plain)
                         .accessibilityAddTraits(prefs.isMine(provider) ? .isSelected : [])
                     }
                 }
-                .padding(.vertical, 6)
-                Toggle("Prefer my services in Mood Mash", isOn: $prefs.onlyMyServices)
+                .padding(.vertical, 4)
+                .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
+                Toggle("Prefer my services in Moods", isOn: $prefs.onlyMyServices)
                     .onChange(of: prefs.onlyMyServices) { catalog.reset() }
                 Picker("Region", selection: $prefs.region) {
-                    ForEach(Preferences.regions, id: \.code) { Text("\(flag($0.code)) \($0.name)").tag($0.code) }
+                    ForEach(Preferences.regions, id: \.code) { Text($0.name).tag($0.code) }
                 }
                 .onChange(of: prefs.region) { catalog.reset() }
             } header: {
-                Text("My streaming services")
+                Text("My Services")
             } footer: {
-                Text("Spud highlights titles on services you already pay for and builds your home feed around them.")
+                Text("Titles on your services are highlighted, and Tonight is built around them.")
             }
 
             Section {
                 HStack {
-                    Image(systemName: catalog.hasTMDB ? "checkmark.seal.fill" : "leaf.fill")
-                        .foregroundStyle(catalog.hasTMDB ? Spud.lettuce : Spud.potato)
-                    Text(catalog.hasTMDB ? "TMDB connected: every movie, series and service" : "Free mode: TVmaze series + Apple movie charts")
+                    Image(systemName: catalog.hasTMDB ? "checkmark.seal.fill" : "info.circle")
+                        .foregroundStyle(catalog.hasTMDB ? Theme.success : Theme.textSecondary)
+                    Text(catalog.hasTMDB ? "TMDB connected: full catalog and all-provider availability" : "Basic mode: TVmaze series and Apple movie charts")
                 }
-                SecureField("TMDB API key or read token", text: $keyDraft)
+                SecureField("TMDB API key or read access token", text: $keyDraft)
                     .textContentType(.password)
                     .onSubmit { Task { await testKey() } }
                 HStack {
-                    Button("Save & test key") { Task { await testKey() } }
+                    Button("Save and Test") { Task { await testKey() } }
                         .disabled(keyDraft.trimmingCharacters(in: .whitespaces).isEmpty || keyStatus == .checking)
                     if !prefs.tmdbKey.isEmpty {
-                        Button("Remove key", role: .destructive) {
+                        Button("Remove Key", role: .destructive) {
                             prefs.tmdbKey = ""
                             keyDraft = ""
                             keyStatus = .idle
@@ -81,68 +78,63 @@ struct SettingsView: View {
                     switch keyStatus {
                     case .idle: EmptyView()
                     case .checking: ProgressView().controlSize(.small)
-                    case .ok: Label("Works!", systemImage: "checkmark.circle.fill").foregroundStyle(Spud.lettuce)
-                    case .failed(let message): Text(message).foregroundStyle(Spud.ketchup).font(.caption)
+                    case .ok: Label("Connected", systemImage: "checkmark.circle.fill").foregroundStyle(Theme.success)
+                    case .failed(let message): Text(message).foregroundStyle(Theme.danger).font(.caption)
                     }
                 }
-                Link("Get a free TMDB key →", destination: URL(string: "https://www.themoviedb.org/settings/api")!)
+                Link("Get a free TMDB API key", destination: URL(string: "https://www.themoviedb.org/settings/api")!)
             } header: {
-                Text("Data sources")
+                Text("Data Sources")
             } footer: {
                 Text("The key syncs to your other devices through iCloud. Streaming availability is provided by JustWatch via TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB. Series data from TVmaze (CC BY-SA).")
             }
 
-            Section {
-                Toggle("Add new couch nights to Calendar", isOn: $prefs.addNightsToCalendar)
-                Picker("Couch night reminder", selection: $prefs.remindMinutesBefore) {
+            Section("Planner") {
+                Toggle("Add viewing nights to Calendar", isOn: $prefs.addNightsToCalendar)
+                Picker("Reminder", selection: $prefs.remindMinutesBefore) {
                     Text("At start time").tag(0)
                     Text("5 minutes before").tag(5)
                     Text("15 minutes before").tag(15)
                     Text("30 minutes before").tag(30)
                     Text("1 hour before").tag(60)
                 }
-                Toggle("New episode alerts for followed shows", isOn: $prefs.newEpisodeAlerts)
+                Toggle("New episode alerts for followed series", isOn: $prefs.newEpisodeAlerts)
                     .onChange(of: prefs.newEpisodeAlerts) { _, on in if on { Task { await Reminders.requestPermission() } } }
-            } header: {
-                Text("Planner")
             }
 
             Section {
                 LabeledContent("iCloud") {
                     Label(iCloudAvailable ? "Syncing" : "Signed out", systemImage: iCloudAvailable ? "icloud.fill" : "icloud.slash")
-                        .foregroundStyle(iCloudAvailable ? Spud.teal : Spud.inkSoft)
+                        .foregroundStyle(iCloudAvailable ? Theme.success : Theme.textSecondary)
                 }
-                LabeledContent("Titles on your couch", value: "\(saved.count)")
-                LabeledContent("Couch nights planned", value: "\(nights.count)")
-                Button("Tidy up duplicates") { Library.dedupe(in: context) }
+                LabeledContent("Titles", value: "\(saved.count)")
+                LabeledContent("Planned nights", value: "\(nights.count)")
+                Button("Merge Duplicates") { Library.dedupe(in: context) }
             } header: {
                 Text("Sync")
             } footer: {
-                Text("Your queue, ratings, progress and plans sync automatically between iPhone, iPad and Mac signed in to the same iCloud account.")
+                Text("Your watchlist, ratings, progress and plans sync between iPhone, iPad and Mac signed in to the same iCloud account.")
             }
 
             Section {
-                Link("Couch Potato on GitHub", destination: URL(string: "https://github.com/nearbycoder/couch-potato")!)
+                HStack(spacing: 12) {
+                    BrandMark(size: 40)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Couch Potato").font(.headline)
+                        Text("Version \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0")")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                Link("GitHub", destination: URL(string: "https://github.com/nearbycoder/couch-potato")!)
                 Link("Website", destination: URL(string: "https://nearbycoder.github.io/couch-potato/")!)
                 Link("Privacy", destination: URL(string: "https://nearbycoder.github.io/couch-potato/privacy.html")!)
-                LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0")
             } header: {
                 Text("About")
-            } footer: {
-                HStack {
-                    Spacer()
-                    VStack(spacing: 6) {
-                        SpudMascot(size: 44, expression: .wink)
-                        Text("Made with butter & SwiftUI").font(.spudCaption)
-                    }
-                    Spacer()
-                }
-                .padding(.top, 12)
             }
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
-        .spudBackground()
+        .appBackground()
         .navigationTitle("Settings")
         .onAppear { keyDraft = prefs.tmdbKey }
     }
@@ -160,43 +152,38 @@ struct SettingsView: View {
             keyStatus = .failed(error.localizedDescription)
         }
     }
-
-    private func flag(_ code: String) -> String {
-        code.unicodeScalars.compactMap { UnicodeScalar(127397 + $0.value) }.map(String.init).joined()
-    }
 }
 
-struct RankCard: View {
+struct StatsCard: View {
     var rank: CouchRank
     var saved: [SavedTitle]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 14) {
-                SpudMascot(size: 64, expression: rank.points > 50 ? .wink : .happy)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Couch Rank").font(.spudCaption).foregroundStyle(Color(hex: 0x3B2416).opacity(0.7))
-                    Text("\(rank.level.emoji) \(rank.level.name)").font(Spud.display(24)).foregroundStyle(Color(hex: 0x3B2416))
-                    Text(rank.level.quip).font(.system(size: 13, design: .rounded)).foregroundStyle(Color(hex: 0x3B2416).opacity(0.8))
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Level").font(.caption.weight(.medium)).foregroundStyle(Theme.textSecondary)
+                    Text(rank.level.name).font(.title2.weight(.bold)).foregroundStyle(Theme.textPrimary)
+                    Text(rank.level.quip).font(.footnote).foregroundStyle(Theme.textSecondary)
                 }
+                Spacer()
+                Text("\(rank.points) pts").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.accent)
             }
             if let next = rank.nextLevel {
-                VStack(alignment: .leading, spacing: 4) {
-                    ProgressView(value: rank.progressToNext).tint(Spud.ketchup)
-                    Text("\(next.threshold - rank.points) pts to \(next.emoji) \(next.name)")
-                        .font(.spudCaption).foregroundStyle(Color(hex: 0x3B2416).opacity(0.7))
+                VStack(alignment: .leading, spacing: 6) {
+                    ProgressView(value: rank.progressToNext).tint(Theme.accent)
+                    Text("\(next.threshold - rank.points) points to \(next.name)")
+                        .font(.caption).foregroundStyle(Theme.textSecondary)
                 }
             }
             HStack {
-                stat("\(rank.moviesWatched)", "movies")
-                stat("\(rank.showsWatched)", "series")
-                stat("\(rank.hoursWatched)h", "couch time")
-                stat(avgRating, "avg 🥔")
+                stat("\(rank.moviesWatched)", "Movies")
+                stat("\(rank.showsWatched)", "Series")
+                stat("\(rank.hoursWatched)h", "Watched")
+                stat(avgRating, "Avg rating")
             }
         }
-        .padding(18)
-        .background(LinearGradient(colors: [Spud.butter, Spud.potato], startPoint: .topLeading, endPoint: .bottomTrailing),
-                    in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .card(padding: 18)
     }
 
     private var avgRating: String {
@@ -207,8 +194,8 @@ struct RankCard: View {
 
     private func stat(_ value: String, _ label: String) -> some View {
         VStack(spacing: 2) {
-            Text(value).font(Spud.display(20)).foregroundStyle(Color(hex: 0x3B2416))
-            Text(label).font(.system(size: 11, weight: .semibold, design: .rounded)).foregroundStyle(Color(hex: 0x3B2416).opacity(0.7))
+            Text(value).font(.title3.weight(.semibold)).foregroundStyle(Theme.textPrimary)
+            Text(label).font(.caption).foregroundStyle(Theme.textSecondary)
         }
         .frame(maxWidth: .infinity)
     }
@@ -221,46 +208,49 @@ struct OnboardingView: View {
     @State private var page = 0
 
     var body: some View {
-        VStack(spacing: 22) {
+        VStack(spacing: 24) {
             Spacer(minLength: 10)
-            SpudMascot(size: 120, expression: page == 0 ? .wow : .happy)
             if page == 0 {
+                BrandMark(size: 96)
                 VStack(spacing: 10) {
-                    Text("Hi! I'm Spud 👋").font(Spud.display(32)).foregroundStyle(Spud.ink)
-                    Text("I live on your couch and I know what's on every streaming service. Let's find you something great to watch.")
-                        .font(.spudBody).foregroundStyle(Spud.inkSoft).multilineTextAlignment(.center)
-                        .frame(maxWidth: 420)
+                    Text("Welcome to Couch Potato").font(.title.bold()).foregroundStyle(Theme.textPrimary).multilineTextAlignment(.center)
+                    Text("Find what to watch across every streaming service, keep one watchlist, and plan your nights in.")
+                        .font(.body).foregroundStyle(Theme.textSecondary).multilineTextAlignment(.center)
+                        .frame(maxWidth: 400)
                 }
-                Button("Let's go!") { withAnimation(.spring) { page = 1 } }.buttonStyle(.chunky(Spud.ketchup))
+                Button("Continue") { withAnimation(.snappy) { page = 1 } }.buttonStyle(.primary)
             } else {
-                VStack(spacing: 10) {
-                    Text("Which services do you have?").font(Spud.display(26)).foregroundStyle(Spud.ink).multilineTextAlignment(.center)
-                    Text("Tap all that apply. You can change these any time.").font(.spudBody).foregroundStyle(Spud.inkSoft)
+                VStack(spacing: 8) {
+                    Text("Your services").font(.title.bold()).foregroundStyle(Theme.textPrimary).multilineTextAlignment(.center)
+                    Text("Select the services you subscribe to. You can change this any time in Settings.")
+                        .font(.body).foregroundStyle(Theme.textSecondary).multilineTextAlignment(.center)
+                        .frame(maxWidth: 400)
                 }
-                FlowLayout(spacing: 10) {
-                    ForEach(Provider.streamers) { provider in
-                        Button { withAnimation(.spring(response: 0.3)) { prefs.toggle(provider) } } label: {
-                            ProviderChip(provider: provider, isMine: prefs.isMine(provider))
-                                .opacity(prefs.isMine(provider) ? 1 : 0.5)
-                                .scaleEffect(prefs.isMine(provider) ? 1.06 : 1)
+                ScrollView {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 8)], spacing: 8) {
+                        ForEach(Provider.streamers) { provider in
+                            Button { withAnimation(.snappy) { prefs.toggle(provider) } } label: {
+                                ProviderChip(provider: provider, isSelected: prefs.isMine(provider))
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityAddTraits(prefs.isMine(provider) ? .isSelected : [])
                         }
-                        .buttonStyle(.plain)
                     }
+                    .frame(maxWidth: 560)
                 }
-                .frame(maxWidth: 460)
-                Button(prefs.myServiceIDs.isEmpty ? "Skip for now" : "Fluff the cushions 🛋️") {
+                Button(prefs.myServiceIDs.isEmpty ? "Skip for now" : "Done") {
                     prefs.hasOnboarded = true
                     dismiss()
                 }
-                .buttonStyle(.chunky(Spud.teal))
+                .buttonStyle(.primary)
             }
             Spacer(minLength: 10)
         }
         .padding(28)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .spudBackground()
+        .appBackground()
         #if os(macOS)
-        .frame(width: 560, height: 600)
+        .frame(width: 560, height: 620)
         #endif
         .interactiveDismissDisabled()
     }

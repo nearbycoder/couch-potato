@@ -43,7 +43,7 @@ final class CouchPotatoTests: XCTestCase {
     }
 
     func testCouchRankLevelsUp() {
-        XCTAssertEqual(CouchRank.levels.first?.name, "Raw Spud")
-        XCTAssertEqual(CouchRank(titles: [], nights: []).level.name, "Raw Spud")
+        XCTAssertEqual(CouchRank.levels.first?.name, "Newcomer")
+        XCTAssertEqual(CouchRank(titles: [], nights: []).level.name, "Newcomer")
     }
 }

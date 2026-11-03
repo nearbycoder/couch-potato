@@ -6,11 +6,11 @@ enum HTTPError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .status(401): "That TMDB key was rejected. Double-check it in Settings."
-        case .status(404): "Spud looked everywhere but couldn't find that one."
-        case .status(429): "Too many requests — Spud needs a breather. Try again in a moment."
-        case .status(let code): "The server sent back a grumpy \(code)."
-        case .missingKey: "Add a TMDB key in Settings to unlock this."
+        case .status(401): "The TMDB key was rejected. Check it in Settings."
+        case .status(404): "That title couldn't be found."
+        case .status(429): "Too many requests. Try again in a moment."
+        case .status(let code): "The server returned an error (\(code))."
+        case .missingKey: "Add a TMDB API key in Settings to use this."
         }
     }
 }

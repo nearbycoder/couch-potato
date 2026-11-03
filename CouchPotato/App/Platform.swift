@@ -39,10 +39,10 @@ extension View {
     }
 }
 
-enum Device {
-    static var isPhone: Bool {
-        #if os(iOS)
-        UIDevice.current.userInterfaceIdiom == .phone
+enum Platform {
+    static var isMac: Bool {
+        #if os(macOS)
+        true
         #else
         false
         #endif
