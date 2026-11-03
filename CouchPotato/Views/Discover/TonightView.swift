@@ -57,7 +57,8 @@ struct TonightView: View {
                 }
             }
             #if os(iOS)
-            if layout.isCompact {
+            // Phones (including an unfolded iPhone Duo) have no Settings tab, so it lives here.
+            if !RootView.hasSidebar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         app.showSettings = true

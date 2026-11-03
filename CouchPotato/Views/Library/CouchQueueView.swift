@@ -42,7 +42,7 @@ struct WatchlistView: View {
                 if filtered.isEmpty {
                     emptyState
                 } else {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: layout.gridMinWidth), spacing: 14, alignment: .top)], spacing: 20) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: layout.gridMinWidth), spacing: layout.isCompact ? 12 : 14, alignment: .top)], spacing: 20) {
                         ForEach(filtered) { item in
                             NavigationLink(value: Route.title(item.ref, preview: item.asCatalogTitle)) {
                                 WatchlistCard(item: item)
@@ -160,8 +160,9 @@ struct WatchlistCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            RemoteImage(url: item.posterURL, maxPixel: 500, placeholderTitle: item.name)
+            Color.clear
                 .aspectRatio(2 / 3, contentMode: .fit)
+                .overlay { RemoteImage(url: item.posterURL, maxPixel: 500, placeholderTitle: item.name) }
                 .artwork()
                 .overlay(alignment: .topLeading) {
                     if let p = item.providers.first(where: { $0 != .appleStore }) {

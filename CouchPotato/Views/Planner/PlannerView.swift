@@ -315,11 +315,10 @@ struct PlanNightSheet: View {
                     Stepper(value: $duration, in: 20...480, step: 10) {
                         LabeledContent("Length", value: duration.runtimeLabel)
                     }
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack {
-                            ForEach(quickTimes, id: \.0) { label, date in
-                                Button(label) { startsAt = date }.buttonStyle(.bordered).tint(Theme.accent)
-                            }
+                    // Wraps instead of scrolling so every shortcut is visible on narrow screens.
+                    FlowLayout(spacing: 8) {
+                        ForEach(quickTimes, id: \.0) { label, date in
+                            Button(label) { startsAt = date }.buttonStyle(.bordered).tint(Theme.accent)
                         }
                     }
                 }

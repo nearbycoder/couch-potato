@@ -64,7 +64,7 @@ struct BrowseView: View {
 
             VStack(alignment: .leading, spacing: 12) {
                 SectionHeader(title: "Services", subtitle: prefs.myServices.isEmpty ? nil : "Yours are marked")
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: layout.isCompact ? 160 : 200), spacing: 10)], spacing: 10) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: layout.isCompact ? 164 : 200), spacing: 10)], spacing: 10) {
                     ForEach(Provider.streamers) { p in
                         NavigationLink(value: Route.provider(p)) {
                             ProviderChip(provider: p, isSelected: prefs.isMine(p), showsCheck: prefs.isMine(p))

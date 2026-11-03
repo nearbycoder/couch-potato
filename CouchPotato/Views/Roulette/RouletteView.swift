@@ -23,6 +23,7 @@ struct ShuffleView: View {
     @State private var shuffling = false
     @State private var winner: CatalogTitle?
     @State private var ticks = 0
+    @State private var viewHeight: CGFloat = 800
 
     private var pool: [CatalogTitle] {
         let base: [CatalogTitle] = source == .queue
@@ -34,7 +35,12 @@ struct ShuffleView: View {
         }
     }
 
-    private var cardWidth: CGFloat { layout.isCompact ? 200 : 240 }
+    /// Leaves room above and below the deck for the controls and the Shuffle button,
+    /// so short screens (an unfolded iPhone Duo, a small Mac window) keep it in view.
+    private var cardWidth: CGFloat {
+        let fits = (viewHeight - 300) / 1.5
+        return max(130, min(layout.isCompact ? 200 : 240, fits))
+    }
 
     var body: some View {
         ScrollView {
@@ -81,6 +87,7 @@ struct ShuffleView: View {
             .padding(.vertical)
             .frame(maxWidth: .infinity)
         }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { viewHeight = $0 }
         .appBackground()
         .navigationTitle("Shuffle")
         .task(id: "\(source.rawValue)-\(mood?.rawValue ?? "")-\(catalog.hasTMDB)") {

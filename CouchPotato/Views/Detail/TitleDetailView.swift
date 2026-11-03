@@ -88,14 +88,25 @@ struct TitleDetailView: View {
 
     @ViewBuilder
     private func actions(_ title: CatalogTitle) -> some View {
+        // One row when it fits; otherwise the primary action on its own row above the rest.
         ViewThatFits(in: .horizontal) {
-            HStack(spacing: 10) { actionButtons(title) }
-            VStack(alignment: .leading, spacing: 10) { actionButtons(title) }
+            HStack(spacing: 10) {
+                primaryAction(title)
+                secondaryActions(title)
+            }
+            VStack(alignment: .leading, spacing: 10) {
+                primaryAction(title)
+                HStack(spacing: 10) { secondaryActions(title) }
+            }
+            VStack(alignment: .leading, spacing: 10) {
+                primaryAction(title)
+                secondaryActions(title)
+            }
         }
     }
 
     @ViewBuilder
-    private func actionButtons(_ title: CatalogTitle) -> some View {
+    private func primaryAction(_ title: CatalogTitle) -> some View {
         if let saved {
             Menu {
                 ForEach(WatchStatus.allCases) { status in
@@ -128,6 +139,10 @@ struct TitleDetailView: View {
             .buttonStyle(.primary)
             .fixedSize()
         }
+    }
+
+    @ViewBuilder
+    private func secondaryActions(_ title: CatalogTitle) -> some View {
         Button {
             app.plan(title)
         } label: {
@@ -190,8 +205,13 @@ struct DetailHeader: View {
         VStack(alignment: .leading, spacing: 0) {
             // The image is an overlay so a wide backdrop can't stretch the ScrollView.
             // Without a real backdrop, a short wash tinted by the poster stands in for one.
+            // Capped by the screen height so short windows (an unfolded iPhone Duo) still show the actions.
             Color.clear
-                .frame(height: title.backdropURL != nil ? (layout.isCompact ? 300 : 380) : (layout.isCompact ? 190 : 230))
+                .containerRelativeFrame(.vertical) { height, _ in
+                    title.backdropURL != nil
+                        ? min(layout.isCompact ? 300 : 380, height * 0.45)
+                        : min(layout.isCompact ? 190 : 230, height * 0.3)
+                }
                 .frame(maxWidth: .infinity)
                 .overlay {
                     if title.backdropURL != nil {

@@ -28,7 +28,7 @@ struct SettingsView: View {
             }
 
             Section {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], spacing: 8) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 164), spacing: 8)], spacing: 8) {
                     ForEach(Provider.streamers) { provider in
                         Button {
                             withAnimation(.snappy) { prefs.toggle(provider) }
@@ -74,13 +74,16 @@ struct SettingsView: View {
                             catalog.reset()
                         }
                     }
-                    Spacer()
+                    Spacer(minLength: 0)
                     switch keyStatus {
-                    case .idle: EmptyView()
+                    case .idle, .failed: EmptyView()
                     case .checking: ProgressView().controlSize(.small)
-                    case .ok: Label("Connected", systemImage: "checkmark.circle.fill").foregroundStyle(Theme.success)
-                    case .failed(let message): Text(message).foregroundStyle(Theme.danger).font(.caption)
+                    case .ok: Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.success).accessibilityLabel("Connected")
                     }
+                }
+                .buttonStyle(.borderless)
+                if case .failed(let message) = keyStatus {
+                    Text(message).foregroundStyle(Theme.danger).font(.footnote)
                 }
                 Link("Get a free TMDB API key", destination: URL(string: "https://www.themoviedb.org/settings/api")!)
             } header: {
@@ -227,7 +230,7 @@ struct OnboardingView: View {
                         .frame(maxWidth: 400)
                 }
                 ScrollView {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 8)], spacing: 8) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 164), spacing: 8)], spacing: 8) {
                         ForEach(Provider.streamers) { provider in
                             Button { withAnimation(.snappy) { prefs.toggle(provider) } } label: {
                                 ProviderChip(provider: provider, isSelected: prefs.isMine(provider))

@@ -65,12 +65,13 @@ struct ProviderChip: View {
     var showsCheck = true
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             ProviderTile(provider: provider, size: 28)
             Text(provider.name)
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(Theme.textPrimary)
                 .lineLimit(1)
+                .minimumScaleFactor(0.85)
             Spacer(minLength: 0)
             if showsCheck {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
@@ -79,7 +80,7 @@ struct ProviderChip: View {
                 Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(Theme.textTertiary)
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 10)
         .padding(.vertical, 10)
         .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(isSelected ? Theme.accent.opacity(0.6) : Theme.hairline))
