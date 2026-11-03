@@ -1,4 +1,5 @@
 import XCTest
+import SwiftData
 @testable import CouchPotato
 
 final class CouchPotatoTests: XCTestCase {
@@ -69,6 +70,48 @@ final class CouchPotatoTests: XCTestCase {
         // TMDB has no horror genre for series, so the TV half is skipped.
         XCTAssertNil(filter.tmdbQuery(for: .tv))
         XCTAssertEqual(TitleFilter(sort: .title).tmdbQuery(for: .tv)?.sort, "name.asc")
+    }
+
+    @MainActor
+    private func memoryContext() throws -> ModelContext {
+        let schema = Schema([SavedTitle.self, CouchNight.self])
+        let container = try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true, cloudKitDatabase: .none))
+        return ModelContext(container)
+    }
+
+    @MainActor
+    func testBackupImportsAndroidFilesAndMergesNewerChanges() throws {
+        let context = try memoryContext()
+        // What the Android app writes: fractional-second ISO dates, `potatoes` alias tolerated.
+        let android = """
+        {"format":"couchpotato.backup","version":1,"exportedAt":"2026-11-03T20:35:33.123Z",
+         "titles":[{"key":"tvmaze-tv-82","source":"tvmaze","kind":"tv","externalID":"82","name":"Game of Thrones",
+                    "genres":["Drama","Fantasy"],"providerIDs":["hbo"],"status":"watching","potatoes":4,
+                    "addedAt":"2026-10-01T10:00:00.5Z","updatedAt":"2026-10-02T10:00:00Z","lastSeason":2,"lastEpisode":3}],
+         "nights":[{"id":"7E57D004-2B97-4E0B-A8C2-0B2C8A3F9A11","titleKey":"tvmaze-tv-82","titleName":"Game of Thrones",
+                    "startsAt":1793750400000,"durationMinutes":60}]}
+        """
+        let first = try Backup.merge(Data(android.utf8), into: context)
+        XCTAssertEqual(first.added, 1)
+        XCTAssertEqual(first.nights, 1)
+        let saved = try XCTUnwrap(Library.saved("tvmaze-tv-82", in: context))
+        XCTAssertEqual(saved.status, .watching)
+        XCTAssertEqual(saved.potatoes, 4)
+        XCTAssertEqual(saved.providers, [.hbo])
+        XCTAssertEqual(saved.lastEpisode, 3)
+
+        // Importing the same file again changes nothing; an older copy never overwrites a newer one.
+        let again = try Backup.merge(Data(android.utf8), into: context)
+        XCTAssertEqual(again.added + again.updated + again.nights, 0)
+
+        // Round trip through our own export keeps everything.
+        let exported = try Backup.export(titles: try context.fetch(FetchDescriptor<SavedTitle>()),
+                                         nights: try context.fetch(FetchDescriptor<CouchNight>()))
+        let other = try memoryContext()
+        let copied = try Backup.merge(exported, into: other)
+        XCTAssertEqual(copied.added, 1)
+        XCTAssertEqual(copied.nights, 1)
+        XCTAssertEqual(Library.saved("tvmaze-tv-82", in: other)?.lastSeason, 2)
     }
 
     func testITunesArtworkIsUpscaled() {

@@ -72,6 +72,17 @@ class Library(private val db: AppDatabase, scope: CoroutineScope) {
     suspend fun allTitles(): List<SavedTitle> = titles.all()
     suspend fun allNights(): List<CouchNight> = nights.all()
 
-    suspend fun importTitles(list: List<SavedTitle>) = titles.upsertAll(list)
-    suspend fun importNights(list: List<CouchNight>) = nights.upsertAll(list)
+    /** Merges imported titles: a title already here is only replaced by a newer copy. */
+    suspend fun importTitles(list: List<SavedTitle>): Int {
+        val newer = list.filter { incoming -> (titles.get(incoming.key)?.updatedAt ?: Long.MIN_VALUE) < incoming.updatedAt }
+        titles.upsertAll(newer)
+        return newer.size
+    }
+
+    /** Adds imported plans that aren't here yet (matched by id). */
+    suspend fun importNights(list: List<CouchNight>): Int {
+        val fresh = list.filter { nights.get(it.id) == null }
+        nights.upsertAll(fresh)
+        return fresh.size
+    }
 }

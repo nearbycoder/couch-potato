@@ -4,6 +4,7 @@ import SwiftData
 struct RootView: View {
     @Environment(AppModel.self) private var app
     @Environment(Preferences.self) private var prefs
+    @Environment(SyncMonitor.self) private var sync
     @Environment(\.modelContext) private var context
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Query(filter: #Predicate<SavedTitle> { $0.statusRaw == "queued" }) private var queued: [SavedTitle]
@@ -80,6 +81,8 @@ struct RootView: View {
             clearKeyboardFocus()
         }
         .onChange(of: app.selection) { clearKeyboardFocus() }
+        // Another device's edits just arrived: fold any titles both devices added.
+        .onChange(of: sync.lastImport) { Library.dedupe(in: context) }
     }
 
     /// AppKit hands keyboard focus to the first poster when a window opens, which

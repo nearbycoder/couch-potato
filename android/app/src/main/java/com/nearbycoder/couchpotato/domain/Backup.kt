@@ -172,7 +172,7 @@ object Backup {
         val titleKey = o.str("titleKey") ?: return null
         val startsAt = o.millis("startsAt") ?: return null
         return CouchNight(
-            id = o.str("id") ?: UUID.randomUUID().toString(),
+            id = o.str("id")?.lowercase() ?: UUID.randomUUID().toString(),
             titleKey = titleKey,
             titleName = o.str("titleName") ?: "Couch night",
             posterUrl = o.str("posterURL", "posterUrl", "posterURLString"),

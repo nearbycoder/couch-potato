@@ -113,10 +113,8 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
                     context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: error("Couldn't read file")
                 }
                 val imported = Backup.import(text)
-                container.library.importTitles(imported.titles)
-                container.library.importNights(imported.nights)
-                imported
-            }.onSuccess { _message.value = "Imported ${it.titles.size} titles and ${it.nights.size} plans." }
+                container.library.importTitles(imported.titles) to container.library.importNights(imported.nights)
+            }.onSuccess { (titles, nights) -> _message.value = "Imported $titles new or updated titles and $nights plans." }
                 .onFailure { _message.value = "Import failed: ${it.message}" }
         }
     }

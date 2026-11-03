@@ -17,7 +17,7 @@ A streaming companion for iPhone, iPad, iPhone Duo, Mac and Android. It finds mo
 - **Planner** — schedule viewing nights on a week view, add them to your calendar, get reminders, and see upcoming episodes of the series you follow.
 - **Shuffle** — can't decide? Filter by mood and time available, then let the deck pick from your watchlist or from what's trending.
 - **Moods** — Cozy, Laughs, Thrills, Feels, Spooky, Brainy.
-- **Sync** — on Apple devices the watchlist, ratings, progress and plans sync through iCloud (SwiftData + CloudKit); settings sync through iCloud key-value storage, and Handoff carries the title you're viewing between devices. Android stores everything on-device and can export/import the same JSON.
+- **Sync** — every iPhone, iPad and Mac on the same iCloud account shares one library: the watchlist, ratings, progress and plans sync through iCloud (SwiftData + CloudKit), settings through iCloud key-value storage, and Handoff carries the title you're viewing between devices. Settings → iCloud Sync shows whether sync is running and when it last ran. Android keeps its library on the device (restored by Android's Google backup); **Settings → Export / Import Library** on either platform moves it between Android and Apple using the same JSON file, merging so newer changes win.
 
 | iPhone | iPad | iPhone Duo (unfolded) |
 |---|---|---|

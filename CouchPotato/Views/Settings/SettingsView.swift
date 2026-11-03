@@ -4,13 +4,17 @@ import SwiftData
 struct SettingsView: View {
     @Environment(Preferences.self) private var prefs
     @Environment(Catalog.self) private var catalog
+    @Environment(SyncMonitor.self) private var sync
     @Environment(\.modelContext) private var context
     @Query private var saved: [SavedTitle]
     @Query private var nights: [CouchNight]
 
     @State private var keyDraft = ""
     @State private var keyStatus: KeyStatus = .idle
-    @State private var iCloudAvailable = FileManager.default.ubiquityIdentityToken != nil
+    @State private var exportDocument: BackupDocument?
+    @State private var isExporting = false
+    @State private var isImporting = false
+    @State private var transferMessage: String?
 
     enum KeyStatus: Equatable { case idle, checking, ok, failed(String) }
 
@@ -106,17 +110,55 @@ struct SettingsView: View {
             }
 
             Section {
-                LabeledContent("iCloud") {
-                    Label(iCloudAvailable ? "Syncing" : "Signed out", systemImage: iCloudAvailable ? "icloud.fill" : "icloud.slash")
-                        .foregroundStyle(iCloudAvailable ? Theme.success : Theme.textSecondary)
+                let status = sync.status
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: status.symbol)
+                        .font(.title3)
+                        .foregroundStyle(status.healthy ? Theme.success : Theme.textSecondary)
+                        .symbolEffect(.pulse, isActive: sync.isSyncing)
+                        .frame(width: 28)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(status.title).font(.body.weight(.medium))
+                        if let detail = status.detail {
+                            Text(detail).font(.footnote).foregroundStyle(Theme.textSecondary)
+                        }
+                    }
                 }
+                .accessibilityElement(children: .combine)
                 LabeledContent("Titles", value: "\(saved.count)")
                 LabeledContent("Planned nights", value: "\(nights.count)")
                 Button("Merge Duplicates") { Library.dedupe(in: context) }
             } header: {
-                Text("Sync")
+                Text("iCloud Sync")
             } footer: {
-                Text("Your watchlist, ratings, progress and plans sync between iPhone, iPad and Mac signed in to the same iCloud account.")
+                Text("Your watchlist, ratings, progress and plans sync automatically between every iPhone, iPad and Mac signed in to the same iCloud account.")
+            }
+            .task { await sync.refreshAccount() }
+
+            Section {
+                Button("Export Library…", systemImage: "square.and.arrow.up") {
+                    do {
+                        exportDocument = BackupDocument(data: try Backup.export(titles: saved, nights: nights))
+                        isExporting = true
+                    } catch {
+                        transferMessage = "Couldn't export: \(error.localizedDescription)"
+                    }
+                }
+                Button("Import Library…", systemImage: "square.and.arrow.down") { isImporting = true }
+                if let transferMessage {
+                    Text(transferMessage).font(.footnote).foregroundStyle(Theme.textSecondary)
+                }
+            } header: {
+                Text("Android & Backups")
+            } footer: {
+                Text("Export a backup file to move your library to the Couch Potato Android app, or import one exported from Android. Importing merges: nothing is deleted, and newer changes win.")
+            }
+            .fileExporter(isPresented: $isExporting, document: exportDocument, contentType: .json,
+                          defaultFilename: "Couch Potato Library") { result in
+                if case .success = result { transferMessage = "Exported \(saved.count) titles and \(nights.count) plans." }
+            }
+            .fileImporter(isPresented: $isImporting, allowedContentTypes: [.json]) { result in
+                importBackup(result)
             }
 
             Section {
@@ -140,6 +182,19 @@ struct SettingsView: View {
         .appBackground()
         .navigationTitle("Settings")
         .onAppear { keyDraft = prefs.tmdbKey }
+    }
+
+    private func importBackup(_ result: Result<URL, Error>) {
+        do {
+            let url = try result.get()
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            let summary = try Backup.merge(try Data(contentsOf: url), into: context)
+            Library.dedupe(in: context)
+            transferMessage = summary.message
+        } catch {
+            transferMessage = "Couldn't import that file. Choose a backup exported from Couch Potato."
+        }
     }
 
     private func testKey() async {
