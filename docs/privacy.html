@@ -178,7 +178,7 @@ a { color: inherit; text-decoration: none; }
       <aside class="summary" aria-labelledby="summary-title">
         <h2 id="summary-title">The short version</h2>
         <ul>
-          <li><strong>No accounts, no servers.</strong> The app never signs you in and never talks to a server we run.</li>
+          <li><strong>No accounts, no servers.</strong> The app never signs you in and never sends us anything. The only file it fetches from this project is a public, read-only series catalog hosted on GitHub Pages.</li>
           <li><strong>Your data stays yours.</strong> Apple devices sync through your own iCloud; Android keeps everything on the device.</li>
           <li><strong>No analytics or tracking.</strong> No ads, no telemetry, no third-party SDKs.</li>
           <li><strong>Catalog lookups go directly to TMDB, TVmaze and Apple.</strong> Those services see the requests, not us.</li>
@@ -199,6 +199,7 @@ a { color: inherit; text-decoration: none; }
           <li><strong>TMDB</strong> (The Movie Database), only if you add your own API key. Requests to TMDB include that key and the titles you search for or open. Streaming availability shown by the app comes from JustWatch data provided through TMDB. See the <a class="link" href="https://www.themoviedb.org/privacy-policy">TMDB privacy policy</a>.</li>
           <li><strong>TVmaze</strong>, for series and episode data. See the <a class="link" href="https://www.tvmaze.com/site/privacy">TVmaze privacy policy</a>.</li>
           <li><strong>Apple's public iTunes endpoints</strong>, for charts and movie metadata when no TMDB key is set. See <a class="link" href="https://www.apple.com/legal/privacy/">Apple's privacy policy</a>.</li>
+          <li><strong>This website (GitHub Pages)</strong>, for the per-service series catalog the app downloads when no TMDB key is set. It's a static file: nothing about you or your library is sent, and we don't log or analyze those requests. GitHub hosts the site under the <a class="link" href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">GitHub privacy statement</a>.</li>
         </ul>
         <p>Like any web request, these services can see your device's IP address and the titles you look up. The app sends nothing else: no identifiers, no contacts, no location.</p>
 

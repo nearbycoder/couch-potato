@@ -229,8 +229,14 @@ struct WinnerCard: View {
                 Spacer(minLength: 0)
             }
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 10) { buttons }
-                VStack(alignment: .leading, spacing: 10) { buttons }
+                HStack(spacing: 10) {
+                    watchButton
+                    secondaryButtons
+                }
+                VStack(alignment: .leading, spacing: 10) {
+                    watchButton
+                    HStack(spacing: 10) { secondaryButtons }
+                }
             }
         }
         .padding(18)
@@ -249,9 +255,12 @@ struct WinnerCard: View {
         .environment(\.colorScheme, .dark)
     }
 
-    @ViewBuilder private var buttons: some View {
-        Button("Watch Now", action: watch).buttonStyle(.primary)
-        Button("Plan It", action: plan).buttonStyle(.secondary)
-        Button("Shuffle Again", action: again).buttonStyle(.secondary)
+    private var watchButton: some View {
+        Button("Watch Now", action: watch).buttonStyle(.primary).fixedSize()
+    }
+
+    @ViewBuilder private var secondaryButtons: some View {
+        Button("Plan It", action: plan).buttonStyle(.secondary).fixedSize()
+        Button("Shuffle Again", action: again).buttonStyle(.secondary).fixedSize()
     }
 }

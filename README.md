@@ -19,13 +19,13 @@ A streaming companion for iPhone, iPad, iPhone Duo, Mac and Android. It finds mo
 - **Moods** — Cozy, Laughs, Thrills, Feels, Spooky, Brainy.
 - **Sync** — every iPhone, iPad and Mac on the same iCloud account shares one library: the watchlist, ratings, progress and plans sync through iCloud (SwiftData + CloudKit), settings through iCloud key-value storage, and Handoff carries the title you're viewing between devices. Settings → iCloud Sync shows whether sync is running and when it last ran. Android keeps its library on the device (restored by Android's Google backup); **Settings → Export / Import Library** on either platform moves it between Android and Apple using the same JSON file, merging so newer changes win.
 
-| iPhone | iPad | iPhone Duo (unfolded) |
-|---|---|---|
-| ![iPhone](docs/screenshots/iphone-tonight.jpg) | ![iPad](docs/screenshots/ipad-tonight.jpg) | ![iPhone Duo](docs/screenshots/duo-tonight.jpg) |
+| Tonight | Title page | Filters | Shuffle |
+|---|---|---|---|
+| ![Tonight](docs/screenshots/iphone-tonight.jpg) | ![Title page](docs/screenshots/iphone-detail.jpg) | ![Filters](docs/screenshots/iphone-netflix.jpg) | ![Shuffle](docs/screenshots/iphone-shuffle.jpg) |
 
-| Title detail (Mac) | Title detail (iPhone) | Android |
+| iPad | iPhone Duo (unfolded) | Android |
 |---|---|---|
-| ![Mac detail](docs/screenshots/mac-detail.jpg) | ![iPhone detail](docs/screenshots/iphone-detail.jpg) | ![Android](docs/screenshots/android-phone.jpg) |
+| ![iPad](docs/screenshots/ipad-detail.jpg) | ![iPhone Duo](docs/screenshots/duo-tonight.jpg) | ![Android](docs/screenshots/android-phone.jpg) |
 
 ## Data sources
 

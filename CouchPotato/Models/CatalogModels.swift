@@ -77,8 +77,9 @@ struct CatalogTitle: Identifiable, Hashable {
     var id: String { ref.key }
     var kind: MediaKind { ref.kind }
 
-    static func == (lhs: CatalogTitle, rhs: CatalogTitle) -> Bool { lhs.ref == rhs.ref }
-    func hash(into hasher: inout Hasher) { hasher.combine(ref) }
+    // Equality covers every field (synthesized), not just `ref`: SwiftUI skips redrawing a view
+    // whose inputs compare equal, so a preview must differ from the fully loaded title.
+    // Code that dedupes titles compares `id` explicitly.
 
     var subtitle: String {
         var bits: [String] = []
