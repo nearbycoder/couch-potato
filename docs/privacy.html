@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — Couch Potato</title>
+<meta name="description" content="Couch Potato's plain-language privacy policy: no accounts, no servers, no tracking. Your data stays in your own iCloud.">
+<meta name="color-scheme" content="light dark">
+<link rel="canonical" href="https://nearbycoder.github.io/couch-potato/privacy.html">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+:root {
+  --tan: #C8935A; --brown: #6B4226; --butter: #FFD45C; --teal: #2F7F7A; --ketchup: #E5533D; --cream: #FFF6E6;
+  --bg: var(--cream); --card: #FFFFFF; --text: #3D2617; --muted: #6B4226; --heading: #4A2C18;
+  --link: #1F6964; --border: #6B4226; --shadow: #6B4226; --focus: #2F7F7A;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1E1612; --card: #2B201A; --text: #FFF6E6; --muted: #E9D4B4; --heading: #FFF6E6;
+    --link: #7FD3CB; --border: #5A3D2A; --shadow: #0E0907; --focus: #FFD45C;
+  }
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 1.0625rem; line-height: 1.65; overflow-x: clip;
+}
+h1, h2 { font-family: "Fredoka", ui-rounded, system-ui, sans-serif; color: var(--heading); line-height: 1.15; margin: 0 0 .5em; }
+h1 { font-size: clamp(2.2rem, 7vw, 3.4rem); }
+h2 { font-size: 1.4rem; font-weight: 600; margin-top: 0; }
+p, ul { margin: 0 0 1em; }
+ul { padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+a { color: var(--link); text-underline-offset: 3px; text-decoration-thickness: 2px; }
+a:hover { text-decoration-style: wavy; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 8px; }
+.wrap { width: min(780px, 100% - 32px); margin-inline: auto; }
+.skip-link {
+  position: absolute; left: 16px; top: -60px; z-index: 10; background: var(--butter); color: #3D2617;
+  font-weight: 800; padding: .6em 1em; border-radius: 12px; border: 3px solid var(--brown); text-decoration: none;
+}
+.skip-link:focus { top: 12px; }
+header { padding: 18px 0; border-bottom: 2px dashed color-mix(in srgb, var(--tan) 55%, transparent); }
+.brand { display: inline-flex; align-items: center; gap: 10px; font-family: "Fredoka", sans-serif; font-weight: 700; font-size: 1.3rem; color: var(--heading); text-decoration: none; }
+.brand svg { width: 34px; height: 34px; }
+main { padding: 40px 0 64px; }
+.updated { display: inline-block; background: var(--butter); color: #3D2617; font-weight: 800; padding: .25em .9em; border-radius: 999px; border: 2px solid var(--brown); transform: rotate(-2deg); margin-bottom: 18px; font-size: .92rem; }
+.tldr {
+  background: var(--card); border: 3px solid var(--border); border-radius: 24px; padding: 20px 22px;
+  box-shadow: 0 7px 0 var(--shadow); transform: rotate(-.8deg); margin: 24px 0 36px;
+}
+.tldr p:last-child { margin-bottom: 0; }
+.card {
+  background: var(--card); border: 3px solid var(--border); border-radius: 22px; padding: 20px 22px 8px;
+  box-shadow: 0 6px 0 var(--shadow); margin-bottom: 26px;
+}
+.card:nth-of-type(odd) { transform: rotate(.5deg); }
+.card:nth-of-type(even) { transform: rotate(-.5deg); }
+@media (max-width: 520px) { .card:nth-of-type(n), .tldr { transform: none; } }
+.attrib { font-size: .95rem; color: var(--muted); }
+footer { background: var(--brown); color: var(--cream); text-align: center; padding: 36px 0; border-top: 6px solid var(--tan); }
+@media (prefers-color-scheme: dark) { footer { background: #140E0B; border-top-color: var(--brown); } }
+footer a { color: var(--butter); font-weight: 800; }
+footer p { margin: 0 0 .5em; }
+.made { font-family: "Fredoka", sans-serif; font-weight: 600; font-size: 1.3rem; }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header>
+  <div class="wrap">
+    <a class="brand" href="./" aria-label="Couch Potato home">
+      <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+        <path d="M33 5c13 0 22 9 22 25 0 17-9 29-24 29C17 59 9 49 9 33 9 16 19 5 33 5z" fill="#C8935A" stroke="#6B4226" stroke-width="3"/>
+        <circle cx="24" cy="27" r="7" fill="#fff" stroke="#6B4226" stroke-width="2"/>
+        <circle cx="41" cy="26" r="7" fill="#fff" stroke="#6B4226" stroke-width="2"/>
+        <circle cx="26" cy="29" r="3.2" fill="#2a1a10"/>
+        <circle cx="43" cy="28" r="3.2" fill="#2a1a10"/>
+        <ellipse cx="18" cy="38" rx="4" ry="2.6" fill="#E5533D" opacity=".55"/>
+        <ellipse cx="47" cy="37" rx="4" ry="2.6" fill="#E5533D" opacity=".55"/>
+        <path d="M26 40q7 6 13 0" fill="none" stroke="#6B4226" stroke-width="2.6" stroke-linecap="round"/>
+      </svg>
+      Couch Potato
+    </a>
+  </div>
+</header>
+
+<main id="main">
+  <div class="wrap">
+    <span class="updated">Last updated: November 3, 2026</span>
+    <h1>Privacy Policy</h1>
+
+    <div class="tldr">
+      <p><strong>The short version:</strong> Couch Potato has no accounts, no servers of its own, and no analytics or tracking. Your watchlist and plans live on your devices and in your own iCloud. We never see them. Spud is nosy about TV, not about you.</p>
+    </div>
+
+    <section class="card" aria-labelledby="h-data">
+      <h2 id="h-data">Your stuff stays yours</h2>
+      <ul>
+        <li>There's no sign-up and no Couch Potato account.</li>
+        <li>Your watchlist, statuses, episode progress, ratings, couch rank and planned couch nights are stored on your device.</li>
+        <li>If you're signed in to iCloud, that data syncs between your iPhone, iPad and Mac through <strong>your own private iCloud database</strong> using Apple's CloudKit. It's governed by Apple's privacy policy, and the developer can't read it.</li>
+      </ul>
+    </section>
+
+    <section class="card" aria-labelledby="h-sources">
+      <h2 id="h-sources">Where the TV info comes from</h2>
+      <p>To show titles, artwork, episode schedules and where things are streaming, the app asks these public services for catalog data:</p>
+      <ul>
+        <li><strong>TMDB</strong> (The Movie Database), only if you choose to add your own free API key in Settings → Data Sources. That key is stored on your device.</li>
+        <li><strong>TVmaze</strong>, for TV show details and episode schedules.</li>
+        <li><strong>Apple's public iTunes feeds</strong>, for charts and artwork.</li>
+      </ul>
+      <p>These requests contain things like search terms, title IDs and your region, so the right results come back. They don't include your watchlist or anything that identifies you. Like any website, these services can see your IP address when your device connects to them, and their own privacy policies apply.</p>
+    </section>
+
+    <section class="card" aria-labelledby="h-perms">
+      <h2 id="h-perms">Optional permissions</h2>
+      <ul>
+        <li><strong>Calendar:</strong> only if you tap to add a couch night to Apple Calendar. The app adds the event you asked for and nothing else.</li>
+        <li><strong>Notifications:</strong> only if you turn on reminders. They're local notifications scheduled on your device, not pushed from a server.</li>
+      </ul>
+      <p>You can change either one any time in your device's Settings.</p>
+    </section>
+
+    <section class="card" aria-labelledby="h-none">
+      <h2 id="h-none">What we don't do</h2>
+      <ul>
+        <li>No analytics, ad SDKs, trackers or fingerprinting.</li>
+        <li>No selling, sharing or collecting of personal data. There's nothing to sell.</li>
+        <li>No hidden servers. Couch Potato is open source, so you can <a href="https://github.com/nearbycoder/couch-potato">read the code</a> and check.</li>
+      </ul>
+    </section>
+
+    <section class="card" aria-labelledby="h-delete">
+      <h2 id="h-delete">Deleting your data</h2>
+      <p>Delete the app to remove local data. To remove synced data, go to Settings → [your name] → iCloud → Manage Storage on your device and delete Couch Potato's data.</p>
+    </section>
+
+    <section class="card" aria-labelledby="h-contact">
+      <h2 id="h-contact">Questions or changes</h2>
+      <p>If this policy changes, the update will be posted on this page with a new date. Questions? <a href="https://github.com/nearbycoder/couch-potato/issues">Open an issue on GitHub</a>.</p>
+    </section>
+
+    <p class="attrib">This product uses the TMDB API but is not endorsed or certified by TMDB. TV data provided by <a href="https://www.tvmaze.com/">TVmaze</a>, licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA</a>.</p>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p class="made">Made with butter and SwiftUI</p>
+    <p><a href="./">Back to the couch</a></p>
+  </div>
+</footer>
+</body>
+</html>

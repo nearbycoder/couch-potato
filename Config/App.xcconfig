@@ -1,0 +1,4 @@
+// Optional build-time TMDB key. Copy Secrets.example.xcconfig to Secrets.xcconfig
+// (gitignored) and set TMDB_API_KEY there, or paste a key in the app's Settings.
+TMDB_API_KEY =
+#include? "Secrets.xcconfig"

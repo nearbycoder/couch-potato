@@ -1,0 +1,934 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Couch Potato — your whole streaming universe, one comfy couch</title>
+<meta name="description" content="Couch Potato is a whimsical SwiftUI app for iPhone, iPad and Mac: see where to watch anything, keep a watchlist, plan couch nights, and spin the wheel when you can't decide.">
+<meta name="theme-color" content="#FFF6E6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1E1612" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<link rel="canonical" href="https://nearbycoder.github.io/couch-potato/">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta property="og:title" content="Couch Potato">
+<meta property="og:description" content="Your whole streaming universe, one comfy couch. For iPhone, iPad and Mac.">
+<meta property="og:url" content="https://nearbycoder.github.io/couch-potato/">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+:root {
+  --tan: #C8935A;
+  --brown: #6B4226;
+  --butter: #FFD45C;
+  --teal: #2F7F7A;
+  --teal-dark: #256662;
+  --teal-light: #3A9690;
+  --ketchup: #E5533D;
+  --ketchup-ink: #B9381F;
+  --cream: #FFF6E6;
+
+  --bg: var(--cream);
+  --bg-alt: #FCEBCF;
+  --card: #FFFFFF;
+  --text: #3D2617;
+  --muted: #6B4226;
+  --heading: #4A2C18;
+  --link: #1F6964;
+  --border: #6B4226;
+  --shadow: #6B4226;
+  --code-bg: #2B201A;
+  --code-text: #FFF6E6;
+  --focus: #2F7F7A;
+  --chip-text: #FFFFFF;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1E1612;
+    --bg-alt: #251B16;
+    --card: #2B201A;
+    --text: #FFF6E6;
+    --muted: #E9D4B4;
+    --heading: #FFF6E6;
+    --link: #7FD3CB;
+    --border: #5A3D2A;
+    --shadow: #0E0907;
+    --code-bg: #120C09;
+    --code-text: #FFF6E6;
+    --focus: #FFD45C;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--bg);
+  overflow-x: clip;
+}
+img, svg { max-width: 100%; }
+h1, h2, h3 {
+  font-family: "Fredoka", ui-rounded, system-ui, sans-serif;
+  color: var(--heading);
+  line-height: 1.12;
+  margin: 0 0 .5em;
+  font-weight: 700;
+}
+h2 { font-size: clamp(1.9rem, 5vw, 2.8rem); }
+h3 { font-size: 1.35rem; font-weight: 600; }
+p { margin: 0 0 1em; }
+a { color: var(--link); text-underline-offset: 3px; text-decoration-thickness: 2px; }
+a:hover { text-decoration-style: wavy; }
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 10px;
+}
+.wrap { width: min(1120px, 100% - 32px); margin-inline: auto; }
+.visually-hidden {
+  position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.skip-link {
+  position: absolute; left: 16px; top: -60px; z-index: 100;
+  background: var(--butter); color: #3D2617; font-weight: 800;
+  padding: .6em 1em; border-radius: 12px; border: 3px solid var(--brown);
+  text-decoration: none;
+}
+.skip-link:focus { top: 12px; }
+
+/* ---------- Header ---------- */
+.site-header {
+  position: sticky; top: 0; z-index: 50;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 2px dashed color-mix(in srgb, var(--tan) 55%, transparent);
+}
+.site-header .wrap {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding-block: 10px;
+}
+.brand {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-family: "Fredoka", sans-serif; font-weight: 700; font-size: 1.35rem;
+  color: var(--heading); text-decoration: none;
+}
+.brand svg { width: 36px; height: 36px; flex: none; }
+.brand { white-space: nowrap; }
+.nav { display: flex; align-items: center; gap: 4px; }
+.nav a {
+  color: var(--text); text-decoration: none; font-weight: 700;
+  padding: .4em .75em; border-radius: 999px;
+}
+.nav a:hover { background: color-mix(in srgb, var(--butter) 45%, transparent); }
+.nav .nav-gh {
+  background: var(--teal); color: #fff;
+  border: 2px solid var(--brown);
+  box-shadow: 0 3px 0 var(--shadow);
+}
+.nav .nav-gh:hover { background: var(--teal-dark); }
+@media (max-width: 600px) { .nav .nav-hide { display: none; } }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; gap: .5em;
+  font-family: "Fredoka", sans-serif; font-weight: 600; font-size: 1.15rem;
+  padding: .75em 1.35em; border-radius: 999px;
+  text-decoration: none; border: 3px solid var(--brown);
+  box-shadow: 0 6px 0 var(--shadow);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.btn:hover { transform: translateY(-2px) rotate(-1deg); box-shadow: 0 8px 0 var(--shadow); text-decoration: none; }
+.btn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--shadow); }
+.btn-primary { background: var(--ketchup-ink); color: #fff; }
+.btn-secondary { background: var(--butter); color: #3D2617; }
+
+/* ---------- Hero ---------- */
+.hero { padding: clamp(32px, 6vw, 72px) 0 40px; position: relative; }
+.hero .wrap {
+  display: grid; gap: 32px; align-items: center;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+}
+@media (max-width: 860px) { .hero .wrap { grid-template-columns: minmax(0, 1fr); text-align: center; } }
+.eyebrow {
+  display: inline-block; font-weight: 800; letter-spacing: .04em;
+  background: var(--butter); color: #3D2617;
+  padding: .3em .9em; border-radius: 999px; border: 2px solid var(--brown);
+  transform: rotate(-2deg); margin-bottom: 18px; font-size: .95rem;
+}
+.hero h1 { font-size: clamp(2.6rem, 8vw, 4.6rem); margin-bottom: .2em; }
+.hero h1 .accent { color: var(--ketchup); display: inline-block; }
+@media (prefers-color-scheme: dark) { .hero h1 .accent { color: var(--butter); } }
+.hero .tagline {
+  font-family: "Fredoka", sans-serif; font-weight: 500;
+  font-size: clamp(1.3rem, 3.4vw, 1.75rem); line-height: 1.3; color: var(--heading);
+  margin-bottom: .8em;
+}
+.hero .lede { font-size: 1.12rem; max-width: 34em; color: var(--muted); }
+@media (max-width: 860px) { .hero .lede { margin-inline: auto; } }
+.platforms { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 26px; padding: 0; list-style: none; }
+@media (max-width: 860px) { .platforms, .cta-row { justify-content: center; } }
+.platforms li {
+  font-weight: 800; padding: .35em 1em; border-radius: 12px;
+  background: var(--card); border: 2px solid var(--border);
+  box-shadow: 0 3px 0 var(--shadow);
+}
+.platforms li:nth-child(1) { transform: rotate(-2deg); }
+.platforms li:nth-child(2) { transform: rotate(1.5deg); }
+.platforms li:nth-child(3) { transform: rotate(-1deg); }
+.cta-row { display: flex; flex-wrap: wrap; gap: 16px; }
+
+.spud-stage { position: relative; display: grid; place-items: center; }
+.spud-button {
+  all: unset; cursor: pointer; display: block; width: 100%; max-width: 520px;
+  border-radius: 32px;
+}
+.spud-button:focus-visible { outline: 3px solid var(--focus); outline-offset: 6px; }
+.spud-svg { width: 100%; height: auto; display: block; overflow: visible; }
+.bubble {
+  position: absolute; top: -6px; right: 4%;
+  background: var(--card); color: var(--text);
+  border: 3px solid var(--brown); border-radius: 22px;
+  padding: .5em .9em; font-weight: 800; font-size: 1rem;
+  box-shadow: 0 5px 0 var(--shadow);
+  max-width: 220px; transform: rotate(3deg);
+  min-height: 2.2em;
+}
+.bubble::after {
+  content: ""; position: absolute; left: 26px; bottom: -14px;
+  width: 20px; height: 20px; background: var(--card);
+  border-right: 3px solid var(--brown); border-bottom: 3px solid var(--brown);
+  transform: rotate(45deg);
+}
+.poke-hint { font-size: .9rem; color: var(--muted); margin-top: 6px; font-weight: 700; }
+
+/* Spud animations */
+.spud-body { animation: bob 3.2s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+.eyes { animation: blink 5s infinite; transform-box: fill-box; transform-origin: 50% 50%; }
+.pupil { animation: googly 4s ease-in-out infinite; }
+.pupil.right { animation-delay: -.6s; }
+.kernel { animation: pop 2.8s ease-in infinite; opacity: 0; transform-box: fill-box; }
+.kernel.k2 { animation-delay: .9s; }
+.kernel.k3 { animation-delay: 1.8s; }
+.tv-glow { animation: glow 2.4s ease-in-out infinite alternate; }
+.spud-svg.jump .spud-body { animation: jump .6s cubic-bezier(.3,1.6,.5,1); }
+@keyframes bob { 0%,100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-7px) rotate(-4deg); } }
+@keyframes blink { 0%,90%,100% { transform: scaleY(1); } 93% { transform: scaleY(.08); } 96% { transform: scaleY(1); } }
+@keyframes googly { 0%,100% { transform: translate(0,0); } 25% { transform: translate(3px,2px); } 50% { transform: translate(-2px,3px); } 75% { transform: translate(2px,-2px); } }
+@keyframes pop { 0% { opacity: 0; transform: translate(0,0) rotate(0); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(-10px,-60px) rotate(140deg); } }
+@keyframes glow { from { opacity: .35; } to { opacity: .7; } }
+@keyframes jump { 0% { transform: translateY(0) rotate(-6deg); } 40% { transform: translateY(-40px) rotate(8deg) scale(1.05); } 100% { transform: translateY(0) rotate(-6deg); } }
+
+/* ---------- Sections ---------- */
+section { padding: clamp(48px, 8vw, 96px) 0; }
+.section-alt { background: var(--bg-alt); }
+.section-head { text-align: center; max-width: 720px; margin: 0 auto 36px; }
+.section-head p { color: var(--muted); font-size: 1.12rem; }
+.squiggle {
+  display: block; width: 120px; height: 14px; margin: 0 auto 14px;
+}
+
+/* Services */
+.chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; padding: 0; margin: 0; list-style: none; }
+.chip {
+  font-family: "Fredoka", sans-serif; font-weight: 600; font-size: 1.15rem;
+  padding: .45em 1.1em; border-radius: 999px; color: #fff;
+  border: 3px solid rgba(0,0,0,.25);
+  box-shadow: 0 4px 0 var(--shadow);
+  transition: transform .2s ease;
+}
+.chip:hover { transform: translateY(-3px) rotate(-3deg); }
+.chip:nth-child(odd) { transform: rotate(-2deg); }
+.chip:nth-child(even) { transform: rotate(2deg); }
+.chip.c1 { background: #B42A1E; }
+.chip.c2 { background: #1D7A4E; }
+.chip.c3 { background: #24479E; }
+.chip.c4 { background: #5B2EA6; }
+.chip.c5 { background: #2D2D33; }
+.chip.c6 { background: #1A6C96; }
+.chip.c7 { background: #8A3B9A; }
+.chip.c8 { background: #1F57B8; }
+.chip.more { background: var(--butter); color: #3D2617; border-color: var(--brown); }
+.services-note { text-align: center; margin-top: 28px; color: var(--muted); }
+
+/* Features */
+.features {
+  display: grid; gap: 26px; list-style: none; padding: 0; margin: 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
+}
+.card {
+  background: var(--card); border: 3px solid var(--border);
+  border-radius: 26px; padding: 24px 24px 20px;
+  box-shadow: 0 8px 0 var(--shadow);
+  transition: transform .25s cubic-bezier(.3,1.4,.5,1);
+  position: relative;
+}
+.features .card:nth-child(3n+1) { transform: rotate(-1.4deg); }
+.features .card:nth-child(3n+2) { transform: rotate(1deg); }
+.features .card:nth-child(3n) { transform: rotate(-.6deg); }
+.features .card:hover { transform: rotate(0) translateY(-4px); }
+@media (max-width: 520px) {
+  .features .card:nth-child(n) { transform: rotate(0); }
+}
+.card .icon {
+  width: 60px; height: 60px; border-radius: 18px;
+  display: grid; place-items: center; font-size: 2rem;
+  border: 3px solid var(--brown); margin-bottom: 14px;
+  box-shadow: 0 4px 0 var(--shadow);
+}
+.i-butter { background: var(--butter); }
+.i-teal { background: #8ED1CB; }
+.i-ketchup { background: #F7A493; }
+.i-tan { background: #E8C08F; }
+.card p { margin-bottom: .6em; }
+.card .fun { font-style: italic; color: var(--muted); font-weight: 700; margin: 0; }
+.mini-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 8px 0 10px; list-style: none; }
+.mini-chips li {
+  font-size: .85rem; font-weight: 800; padding: .15em .65em; border-radius: 999px;
+  background: color-mix(in srgb, var(--butter) 55%, var(--card)); color: var(--text);
+  border: 2px solid color-mix(in srgb, var(--brown) 45%, transparent);
+}
+@media (prefers-color-scheme: dark) {
+  .mini-chips li { background: color-mix(in srgb, var(--butter) 14%, var(--card)); color: var(--butter); border-color: color-mix(in srgb, var(--butter) 40%, transparent); }
+}
+.ranks { padding: 0; margin: 8px 0 10px; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 2px; font-size: .88rem; font-weight: 800; }
+.ranks li::after { content: " →"; color: var(--tan); }
+.ranks li:last-child::after { content: " 👑"; }
+.potato-rating { font-size: 1.5rem; letter-spacing: 2px; margin: 4px 0 8px; }
+.potato-rating .dim { opacity: .28; filter: grayscale(1); }
+
+/* Devices */
+.devices {
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end;
+  gap: 32px;
+}
+.device-fig { margin: 0; text-align: center; max-width: 100%; }
+.device-fig figcaption { font-family: "Fredoka", sans-serif; font-weight: 600; font-size: 1.15rem; margin-top: 14px; color: var(--heading); }
+.device {
+  background: #2A1C14; border-radius: 30px; padding: 10px;
+  box-shadow: 0 10px 0 var(--shadow), inset 0 0 0 2px #4A3326;
+  margin-inline: auto;
+}
+.screen {
+  background: var(--cream); border-radius: 22px; overflow: hidden;
+  padding: 10px; display: flex; flex-direction: column; gap: 8px; height: 100%;
+}
+@media (prefers-color-scheme: dark) { .screen { background: #3A2B22; } }
+.screen-bar { display: flex; align-items: center; gap: 6px; }
+.screen-bar .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--tan); border: 2px solid var(--brown); flex: none; }
+.screen-bar .bar { height: 10px; border-radius: 6px; background: var(--brown); opacity: .55; flex: 1; max-width: 90px; }
+.screen-bar .pill { height: 12px; width: 34px; border-radius: 6px; background: var(--butter); margin-left: auto; }
+.poster-grid { display: grid; gap: 7px; }
+.poster {
+  aspect-ratio: 2 / 3; border-radius: 7px; position: relative;
+  box-shadow: inset 0 -16px 0 rgba(0,0,0,.18);
+}
+.poster:nth-child(7n+1) { background: var(--ketchup); }
+.poster:nth-child(7n+2) { background: var(--teal); }
+.poster:nth-child(7n+3) { background: var(--butter); }
+.poster:nth-child(7n+4) { background: var(--brown); }
+.poster:nth-child(7n+5) { background: #7A5BC8; }
+.poster:nth-child(7n+6) { background: var(--tan); }
+.poster:nth-child(7n) { background: #3C8DD1; }
+.poster::after {
+  content: ""; position: absolute; left: 18%; right: 18%; top: 22%; height: 26%;
+  border-radius: 50%; background: rgba(255,255,255,.28);
+}
+.phone { width: 180px; border-radius: 34px; }
+.phone .screen { border-radius: 26px; }
+.phone .poster-grid { grid-template-columns: repeat(2, 1fr); }
+.phone .notch { width: 54px; height: 12px; background: #2A1C14; border-radius: 0 0 10px 10px; margin: -10px auto 0; }
+.tablet { width: min(320px, 100%); }
+.tablet .poster-grid { grid-template-columns: repeat(4, 1fr); }
+.laptop-wrap { width: 400px; max-width: 100%; }
+.laptop { border-radius: 20px 20px 6px 6px; padding: 12px; }
+.laptop .screen { border-radius: 10px; flex-direction: row; }
+.laptop .sidebar { width: 22%; display: flex; flex-direction: column; gap: 6px; padding-top: 4px; }
+.laptop .sidebar span { height: 9px; border-radius: 5px; background: var(--brown); opacity: .4; }
+.laptop .sidebar span:first-child { background: var(--teal); opacity: 1; }
+.laptop .main { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.laptop .poster-grid { grid-template-columns: repeat(5, 1fr); }
+.laptop-base {
+  height: 16px; background: #C9B49C; border-radius: 0 0 18px 18px;
+  margin: 0 -24px; border: 3px solid #2A1C14; border-top: 0;
+  box-shadow: 0 8px 0 var(--shadow);
+  position: relative;
+}
+.laptop-base::before {
+  content: ""; position: absolute; left: 50%; top: 0; transform: translateX(-50%);
+  width: 70px; height: 6px; border-radius: 0 0 8px 8px; background: #A8927A;
+}
+@media (max-width: 640px) {
+  .devices { flex-direction: column; align-items: center; gap: 40px; }
+  .device-fig { width: 100%; }
+}
+@media (max-width: 460px) {
+  .laptop-base { margin: 0 -8px; }
+}
+
+/* Build */
+.build-grid { display: grid; gap: 32px; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); align-items: start; }
+.build-grid > * { min-width: 0; }
+@media (max-width: 860px) { .build-grid { grid-template-columns: minmax(0, 1fr); } }
+.reqs { transform: rotate(-1deg); }
+.reqs ul { padding-left: 0; list-style: none; margin: 0; }
+.reqs li { padding: .5em 0 .5em 2.1em; position: relative; border-bottom: 2px dashed color-mix(in srgb, var(--tan) 50%, transparent); }
+.reqs li:last-child { border-bottom: 0; }
+.reqs li::before { content: "🥔"; position: absolute; left: 0; top: .45em; }
+.steps { list-style: none; padding: 0; margin: 0; counter-reset: step; display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; }
+.steps > li { counter-increment: step; position: relative; padding-left: 56px; min-width: 0; }
+.steps > li::before {
+  content: counter(step);
+  position: absolute; left: 0; top: 0;
+  width: 42px; height: 42px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-family: "Fredoka", sans-serif; font-weight: 700; font-size: 1.25rem;
+  background: var(--butter); color: #3D2617; border: 3px solid var(--brown);
+  box-shadow: 0 3px 0 var(--shadow);
+}
+.steps h3 { margin: 6px 0 .35em; font-size: 1.2rem; }
+.steps p { margin-bottom: .5em; }
+.code {
+  position: relative; background: var(--code-bg); color: var(--code-text);
+  border-radius: 16px; border: 3px solid var(--brown);
+  box-shadow: 0 5px 0 var(--shadow);
+  display: flex; align-items: stretch;
+}
+.code pre {
+  margin: 0; padding: 14px 16px; overflow-x: auto; flex: 1; min-width: 0;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .95rem; line-height: 1.55;
+}
+.code pre code::before { content: "$ "; color: var(--butter); user-select: none; -webkit-user-select: none; }
+@media (max-width: 480px) {
+  .steps > li { padding-left: 0; }
+  .steps > li::before { position: static; display: inline-grid; width: 34px; height: 34px; font-size: 1rem; margin-right: 8px; vertical-align: middle; }
+  .steps h3 { display: inline; vertical-align: middle; }
+  .steps .code { margin-top: 10px; }
+  .code pre { font-size: .85rem; padding: 12px; }
+}
+.copy-btn {
+  flex: none; align-self: center; margin: 8px; cursor: pointer;
+  font: 800 .85rem "Nunito", sans-serif;
+  background: var(--butter); color: #3D2617;
+  border: 2px solid var(--brown); border-radius: 999px; padding: .4em .9em;
+  box-shadow: 0 3px 0 #000;
+  transition: transform .1s ease;
+}
+.copy-btn:hover { transform: translateY(-1px); }
+.copy-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #000; }
+.copy-btn.copied { background: #8ED1CB; }
+.tip {
+  margin-top: 28px; background: color-mix(in srgb, var(--butter) 30%, var(--card));
+  border: 3px dashed var(--brown); border-radius: 22px; padding: 18px 20px;
+}
+.tip strong { font-family: "Fredoka", sans-serif; font-weight: 600; font-size: 1.1rem; }
+kbd {
+  font-family: inherit; font-weight: 800; font-size: .9em;
+  background: var(--card); border: 2px solid var(--border); border-bottom-width: 4px;
+  border-radius: 8px; padding: 0 .4em;
+}
+code.inline {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .92em;
+  background: color-mix(in srgb, var(--tan) 25%, transparent); padding: .05em .35em; border-radius: 6px;
+}
+
+/* Footer */
+.site-footer {
+  background: var(--brown); color: var(--cream);
+  padding: 48px 0 40px; text-align: center;
+  border-top: 6px solid var(--tan);
+}
+@media (prefers-color-scheme: dark) { .site-footer { background: #140E0B; border-top-color: var(--brown); } }
+.site-footer a { color: var(--butter); }
+.site-footer .made { font-family: "Fredoka", sans-serif; font-weight: 600; font-size: 1.5rem; margin-bottom: .4em; }
+.site-footer .links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 22px; margin: 0 0 18px; padding: 0; list-style: none; font-weight: 800; }
+.site-footer small { display: block; max-width: 640px; margin: 0 auto; opacity: .9; font-size: .88rem; line-height: 1.6; }
+.site-footer small + small { margin-top: 8px; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .kernel { opacity: 0; }
+}
+
+/* Real screenshots */
+.shots { display: grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); margin-top: 8px; }
+.shot { margin: 0; background: var(--card); border: 3px solid var(--brown); border-radius: 22px; overflow: hidden;
+  box-shadow: 0 6px 0 rgba(107,66,38,.25); transform: rotate(var(--tilt, 0deg)); transition: transform .25s ease; }
+.shot:hover { transform: rotate(0deg) scale(1.02); }
+.shot img { display: block; width: 100%; height: auto; }
+.shot figcaption { padding: .7em 1em; font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { .shot, .shot:hover { transform: none; transition: none; } }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Couch Potato, back to top">
+      <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+        <path d="M33 5c13 0 22 9 22 25 0 17-9 29-24 29C17 59 9 49 9 33 9 16 19 5 33 5z" fill="#C8935A" stroke="#6B4226" stroke-width="3"/>
+        <circle cx="24" cy="27" r="7" fill="#fff" stroke="#6B4226" stroke-width="2"/>
+        <circle cx="41" cy="26" r="7" fill="#fff" stroke="#6B4226" stroke-width="2"/>
+        <circle cx="26" cy="29" r="3.2" fill="#2a1a10"/>
+        <circle cx="43" cy="28" r="3.2" fill="#2a1a10"/>
+        <ellipse cx="18" cy="38" rx="4" ry="2.6" fill="#E5533D" opacity=".55"/>
+        <ellipse cx="47" cy="37" rx="4" ry="2.6" fill="#E5533D" opacity=".55"/>
+        <path d="M26 40q7 6 13 0" fill="none" stroke="#6B4226" stroke-width="2.6" stroke-linecap="round"/>
+      </svg>
+      Couch Potato
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a class="nav-hide" href="#features">Features</a>
+      <a class="nav-hide" href="#devices">Devices</a>
+      <a href="#build">Build</a>
+      <a class="nav-gh" href="https://github.com/nearbycoder/couch-potato">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <!-- ========== HERO ========== -->
+  <section class="hero" id="top" aria-labelledby="hero-title">
+    <div class="wrap">
+      <div>
+        <span class="eyebrow">Now lounging on a screen near you</span>
+        <h1 id="hero-title">Couch <span class="accent">Potato</span></h1>
+        <p class="tagline">Your whole streaming universe, one comfy couch.</p>
+        <p class="lede">Find out where anything is streaming, keep a watchlist that actually remembers where you left off, plan cozy couch nights, and let a spinning wheel of posters settle the “what should we watch?” debate once and for all.</p>
+        <ul class="platforms" aria-label="Available for">
+          <li>iPhone</li>
+          <li>iPad</li>
+          <li>Mac</li>
+        </ul>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="https://github.com/nearbycoder/couch-potato">
+            <span aria-hidden="true">🥔</span> Get the code
+          </a>
+          <a class="btn btn-secondary" href="#build">
+            <span aria-hidden="true">🛠️</span> Build it yourself
+          </a>
+        </div>
+      </div>
+
+      <div class="spud-stage">
+        <p class="bubble" id="spud-says" aria-live="polite">Psst… one more episode?</p>
+        <button class="spud-button" type="button" id="poke-spud" aria-describedby="spud-says">
+          <span class="visually-hidden">Poke Spud</span>
+          <svg class="spud-svg" id="spud-svg" viewBox="0 0 440 340" role="img" aria-labelledby="spud-title spud-desc">
+            <title id="spud-title">Spud the couch potato</title>
+            <desc id="spud-desc">A cartoon potato with big googly eyes and rosy cheeks lounging on a teal couch, holding a remote, with a bucket of popcorn on the armrest.</desc>
+            <defs>
+              <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#FFD45C" stop-opacity=".9"/>
+                <stop offset="100%" stop-color="#FFD45C" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <!-- TV glow -->
+            <ellipse class="tv-glow" cx="220" cy="150" rx="210" ry="150" fill="url(#glow)"/>
+            <!-- floor shadow -->
+            <ellipse cx="220" cy="318" rx="190" ry="14" fill="#6B4226" opacity=".18"/>
+
+            <!-- couch back -->
+            <rect x="50" y="110" width="340" height="140" rx="44" fill="#2F7F7A" stroke="#1E4F4C" stroke-width="5"/>
+            <path d="M150 122 v100 M290 122 v100" stroke="#256662" stroke-width="5" stroke-linecap="round"/>
+            <circle cx="100" cy="160" r="4" fill="#1E4F4C"/>
+            <circle cx="220" cy="155" r="4" fill="#1E4F4C"/>
+            <circle cx="340" cy="160" r="4" fill="#1E4F4C"/>
+
+            <!-- throw pillow -->
+            <g transform="rotate(-14 110 190)">
+              <rect x="74" y="158" width="74" height="64" rx="20" fill="#FFD45C" stroke="#6B4226" stroke-width="5"/>
+              <path d="M90 190 h42" stroke="#E5533D" stroke-width="5" stroke-linecap="round" stroke-dasharray="2 10"/>
+            </g>
+
+            <!-- base -->
+            <rect x="56" y="266" width="328" height="36" rx="16" fill="#256662" stroke="#1E4F4C" stroke-width="5"/>
+            <!-- legs -->
+            <rect x="82" y="300" width="16" height="16" rx="5" fill="#6B4226"/>
+            <rect x="342" y="300" width="16" height="16" rx="5" fill="#6B4226"/>
+            <!-- left arm (behind spud so the remote shows) -->
+            <rect x="24" y="168" width="82" height="128" rx="36" fill="#256662" stroke="#1E4F4C" stroke-width="5"/>
+            <!-- spud -->
+            <g class="spud-body">
+              <!-- back arm -->
+              <path d="M262 205 q30 -6 40 -26" fill="none" stroke="#6B4226" stroke-width="7" stroke-linecap="round"/>
+              <!-- body -->
+              <path d="M218 72 C 278 70 306 116 302 172 C 298 228 270 262 214 262 C 154 262 126 230 130 172 C 134 112 160 74 218 72 Z" fill="#C8935A" stroke="#6B4226" stroke-width="6"/>
+              <!-- spots -->
+              <ellipse cx="160" cy="220" rx="7" ry="5" fill="#A8743F"/>
+              <ellipse cx="276" cy="226" rx="6" ry="4" fill="#A8743F"/>
+              <ellipse cx="250" cy="98" rx="5" ry="3.5" fill="#A8743F"/>
+              <ellipse cx="170" cy="112" rx="4" ry="3" fill="#A8743F"/>
+              <ellipse cx="230" cy="244" rx="4" ry="3" fill="#A8743F"/>
+              <!-- highlight -->
+              <path d="M168 98 q-20 22 -22 52" fill="none" stroke="#E8C08F" stroke-width="7" stroke-linecap="round"/>
+              <!-- eyes -->
+              <g class="eyes">
+                <circle cx="190" cy="150" r="26" fill="#fff" stroke="#6B4226" stroke-width="5"/>
+                <circle cx="252" cy="146" r="28" fill="#fff" stroke="#6B4226" stroke-width="5"/>
+                <g class="pupil"><circle cx="196" cy="156" r="11" fill="#22140B"/><circle cx="199" cy="152" r="3.5" fill="#fff"/></g>
+                <g class="pupil right"><circle cx="258" cy="152" r="12" fill="#22140B"/><circle cx="261" cy="148" r="3.8" fill="#fff"/></g>
+              </g>
+              <!-- brows -->
+              <path d="M172 116 q14 -8 28 -2" fill="none" stroke="#6B4226" stroke-width="5" stroke-linecap="round"/>
+              <path d="M238 110 q16 -8 30 0" fill="none" stroke="#6B4226" stroke-width="5" stroke-linecap="round"/>
+              <!-- cheeks -->
+              <ellipse cx="166" cy="194" rx="16" ry="10" fill="#E5533D" opacity=".5"/>
+              <ellipse cx="282" cy="190" rx="16" ry="10" fill="#E5533D" opacity=".5"/>
+              <!-- mouth -->
+              <path d="M200 196 q24 26 48 -2" fill="#8A2E1E" stroke="#6B4226" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M214 208 q10 6 20 0" fill="none" stroke="#F7A493" stroke-width="5" stroke-linecap="round"/>
+              <!-- front arm + remote -->
+              <path d="M150 210 q-22 4 -30 -16" fill="none" stroke="#6B4226" stroke-width="7" stroke-linecap="round"/>
+              <g transform="rotate(-28 116 186)">
+                <rect x="106" y="160" width="22" height="46" rx="8" fill="#3D2617" stroke="#22140B" stroke-width="3"/>
+                <circle cx="117" cy="171" r="4" fill="#E5533D"/>
+                <circle cx="117" cy="184" r="2.6" fill="#FFD45C"/>
+                <circle cx="117" cy="194" r="2.6" fill="#FFD45C"/>
+              </g>
+            </g>
+
+            <!-- seat cushions (in front of spud's bottom) -->
+            <rect x="104" y="226" width="234" height="52" rx="22" fill="#3A9690" stroke="#1E4F4C" stroke-width="5"/>
+            <path d="M221 232 v40" stroke="#2F7F7A" stroke-width="4" stroke-linecap="round"/>
+            <!-- spud feet -->
+            <ellipse cx="180" cy="236" rx="17" ry="10" fill="#C8935A" stroke="#6B4226" stroke-width="5"/>
+            <ellipse cx="252" cy="238" rx="17" ry="10" fill="#C8935A" stroke="#6B4226" stroke-width="5"/>
+            <!-- right arm -->
+            <rect x="334" y="168" width="82" height="128" rx="36" fill="#256662" stroke="#1E4F4C" stroke-width="5"/>
+
+            <!-- popcorn bucket on right arm -->
+            <g>
+              <circle class="kernel" cx="372" cy="118" r="8" fill="#FFF6E6" stroke="#E0B43A" stroke-width="3"/>
+              <circle class="kernel k2" cx="388" cy="124" r="7" fill="#FFF6E6" stroke="#E0B43A" stroke-width="3"/>
+              <circle class="kernel k3" cx="360" cy="126" r="7" fill="#FFF6E6" stroke="#E0B43A" stroke-width="3"/>
+              <circle cx="356" cy="136" r="10" fill="#FFF6E6" stroke="#E0B43A" stroke-width="3"/>
+              <circle cx="374" cy="130" r="11" fill="#FFF6E6" stroke="#E0B43A" stroke-width="3"/>
+              <circle cx="392" cy="137" r="10" fill="#FFF6E6" stroke="#E0B43A" stroke-width="3"/>
+              <path d="M344 142 h60 l-8 46 h-44 z" fill="#FFF6E6" stroke="#6B4226" stroke-width="5" stroke-linejoin="round"/>
+              <path d="M358 144 l3 42 M374 144 v42 M390 144 l-3 42" stroke="#E5533D" stroke-width="7"/>
+              <path d="M344 142 h60 l-8 46 h-44 z" fill="none" stroke="#6B4226" stroke-width="5" stroke-linejoin="round"/>
+            </g>
+          </svg>
+        </button>
+        <p class="poke-hint">Go on, give Spud a poke.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== SERVICES ========== -->
+  <section class="section-alt" id="services" aria-labelledby="services-title">
+    <div class="wrap">
+      <div class="section-head">
+        <svg class="squiggle" viewBox="0 0 120 14" aria-hidden="true" focusable="false"><path d="M2 7 q10 -10 20 0 t20 0 t20 0 t20 0 t20 0 t20 0" fill="none" stroke="#C8935A" stroke-width="4" stroke-linecap="round"/></svg>
+        <h2 id="services-title">Every service, one spud</h2>
+        <p>Stop opening six apps to find one movie. Couch Potato checks them all and tells you where it lives.</p>
+      </div>
+      <ul class="chips" aria-label="Supported streaming services">
+        <li class="chip c1">Netflix</li>
+        <li class="chip c2">Hulu</li>
+        <li class="chip c3">Disney+</li>
+        <li class="chip c4">HBO Max</li>
+        <li class="chip c5">Apple TV</li>
+        <li class="chip c6">Prime Video</li>
+        <li class="chip c7">Peacock</li>
+        <li class="chip c8">Paramount+</li>
+        <li class="chip more">&amp; more</li>
+      </ul>
+      <p class="services-note">Availability varies by region. Spud checks yours.</p>
+    </div>
+  </section>
+
+  <!-- ========== FEATURES ========== -->
+  <section id="features" aria-labelledby="features-title">
+    <div class="wrap">
+      <div class="section-head">
+        <svg class="squiggle" viewBox="0 0 120 14" aria-hidden="true" focusable="false"><path d="M2 7 q10 -10 20 0 t20 0 t20 0 t20 0 t20 0 t20 0" fill="none" stroke="#2F7F7A" stroke-width="4" stroke-linecap="round"/></svg>
+        <h2 id="features-title">Fully loaded (like a baked potato)</h2>
+        <p>Nine ways to make your couch time spud-tacular.</p>
+      </div>
+      <ul class="features">
+        <li class="card">
+          <div class="icon i-butter" aria-hidden="true">📺</div>
+          <h3>Tonight's Tater</h3>
+          <p>A home feed of what's trending and what just landed on streaming, with full, gorgeous box art.</p>
+          <p class="fun">Fresh picks, hot out of the oven.</p>
+        </li>
+        <li class="card">
+          <div class="icon i-teal" aria-hidden="true">🧭</div>
+          <h3>Where to Watch</h3>
+          <p>See which services carry a title in your region, filter to the ones you actually pay for, and jump in with one tap.</p>
+          <p class="fun">No more subscription scavenger hunts.</p>
+        </li>
+        <li class="card">
+          <div class="icon i-ketchup" aria-hidden="true">📋</div>
+          <h3>Couch Queue</h3>
+          <p>Your watchlist with real statuses and episode progress, so you always know where you left off.</p>
+          <ul class="mini-chips" aria-label="Watchlist statuses">
+            <li>Want to Watch</li><li>Watching</li><li>Watched</li><li>Dropped</li>
+          </ul>
+          <p class="fun">Dropped is a judgment-free zone.</p>
+        </li>
+        <li class="card">
+          <div class="icon i-tan" aria-hidden="true">🗓️</div>
+          <h3>Spud Planner</h3>
+          <p>Schedule couch nights on a week planner, add them to Apple Calendar, get reminders, and see upcoming episodes of shows you follow.</p>
+          <p class="fun">Finally, a calendar you look forward to.</p>
+        </li>
+        <li class="card">
+          <div class="icon i-butter" aria-hidden="true">🎡</div>
+          <h3>Spud Roulette</h3>
+          <p>Can't decide? Spin the wheel of posters, filtered by mood and by how much time you've actually got.</p>
+          <p class="fun">Let fate (and a potato) choose.</p>
+        </li>
+        <li class="card">
+          <div class="icon i-teal" aria-hidden="true">🎭</div>
+          <h3>Mood Mash</h3>
+          <p>Pick a vibe and get picks that match it.</p>
+          <ul class="mini-chips" aria-label="Moods">
+            <li>Cozy</li><li>Belly Laughs</li><li>Edge of Couch</li><li>Big Feels</li><li>Spooky</li><li>Brain Food</li>
+          </ul>
+          <p class="fun">Feelings, but make them bingeable.</p>
+        </li>
+        <li class="card">
+          <div class="icon i-ketchup" aria-hidden="true">⭐</div>
+          <h3>Potato Ratings</h3>
+          <p>Rate anything from one to five potatoes. Stars are for astronomers.</p>
+          <p class="potato-rating" role="img" aria-label="Example rating: 4 out of 5 potatoes"><span aria-hidden="true">🥔🥔🥔🥔<span class="dim">🥔</span></span></p>
+          <p class="fun">Four potatoes: would mash again.</p>
+        </li>
+        <li class="card">
+          <div class="icon i-tan" aria-hidden="true">🏆</div>
+          <h3>Couch Rank</h3>
+          <p>Level up the more you watch:</p>
+          <ol class="ranks" aria-label="Ranks from lowest to highest">
+            <li>Raw Spud</li><li>Tater Tot</li><li>Hash Brown</li><li>Curly Fry</li><li>Baked Legend</li><li>Mashed Royalty</li>
+          </ol>
+          <p class="fun">Your couch has been training for this.</p>
+        </li>
+        <li class="card">
+          <div class="icon i-butter" aria-hidden="true">☁️</div>
+          <h3>iCloud Sync</h3>
+          <p>Your queue, ratings and plans sync between iPhone, iPad and Mac automatically, through your own iCloud.</p>
+          <p class="fun">Start on the couch, finish in bed. Spud keeps up.</p>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ========== DEVICES ========== -->
+  <section class="section-alt" id="devices" aria-labelledby="devices-title">
+    <div class="wrap">
+      <div class="section-head">
+        <svg class="squiggle" viewBox="0 0 120 14" aria-hidden="true" focusable="false"><path d="M2 7 q10 -10 20 0 t20 0 t20 0 t20 0 t20 0 t20 0" fill="none" stroke="#E5533D" stroke-width="4" stroke-linecap="round"/></svg>
+        <h2 id="devices-title">Made for every couch</h2>
+        <p>One SwiftUI app that feels at home on your phone, your tablet and your Mac. Pocket couch, lap couch, desk couch.</p>
+      </div>
+      <div class="devices">
+        <figure class="device-fig">
+          <div class="device phone" role="img" aria-label="iPhone showing a two-column grid of colorful poster placeholders">
+            <div class="screen">
+              <div class="notch"></div>
+              <div class="screen-bar"><span class="dot"></span><span class="bar"></span><span class="pill"></span></div>
+              <div class="poster-grid">
+                <span class="poster"></span><span class="poster"></span><span class="poster"></span>
+                <span class="poster"></span><span class="poster"></span><span class="poster"></span>
+              </div>
+            </div>
+          </div>
+          <figcaption>iPhone</figcaption>
+        </figure>
+        <figure class="device-fig">
+          <div class="device tablet" role="img" aria-label="iPad showing a four-column grid of colorful poster placeholders">
+            <div class="screen">
+              <div class="screen-bar"><span class="dot"></span><span class="bar"></span><span class="pill"></span></div>
+              <div class="poster-grid">
+                <span class="poster"></span><span class="poster"></span><span class="poster"></span><span class="poster"></span>
+                <span class="poster"></span><span class="poster"></span><span class="poster"></span><span class="poster"></span>
+                <span class="poster"></span><span class="poster"></span><span class="poster"></span><span class="poster"></span>
+              </div>
+            </div>
+          </div>
+          <figcaption>iPad</figcaption>
+        </figure>
+        <figure class="device-fig laptop-wrap">
+          <div role="img" aria-label="Mac laptop showing a sidebar and a five-column grid of colorful poster placeholders">
+            <div class="device laptop">
+              <div class="screen">
+                <div class="sidebar"><span></span><span></span><span></span><span></span><span></span></div>
+                <div class="main">
+                  <div class="screen-bar"><span class="dot"></span><span class="bar"></span><span class="pill"></span></div>
+                  <div class="poster-grid">
+                    <span class="poster"></span><span class="poster"></span><span class="poster"></span><span class="poster"></span><span class="poster"></span>
+                    <span class="poster"></span><span class="poster"></span><span class="poster"></span><span class="poster"></span><span class="poster"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="laptop-base"></div>
+          </div>
+          <figcaption>Mac</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== BUILD ========== -->
+  <section id="screens" aria-labelledby="screens-title">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="screens-title">Straight off the couch</h2>
+        <p>Real screenshots from the Mac app, running without an API key. Box art from Apple's charts and TVmaze.</p>
+      </div>
+      <div class="shots">
+        <figure class="shot" style="--tilt:-1.2deg"><img src="screenshots/tonight.jpg" width="1280" height="860" loading="lazy" alt="Couch Potato's Tonight screen: a greeting from Spud, a hero carousel of trending titles, Mood Mash cards and a row of trending posters"><figcaption>🔥 Tonight's Tater</figcaption></figure>
+        <figure class="shot" style="--tilt:1deg"><img src="screenshots/detail.jpg" width="1280" height="860" loading="lazy" alt="Severance title page with backdrop, poster, potato score and where-to-watch showing Apple TV"><figcaption>📡 Where to watch</figcaption></figure>
+        <figure class="shot" style="--tilt:-0.6deg"><img src="screenshots/roulette.jpg" width="1280" height="860" loading="lazy" alt="Spud Roulette: a colorful wheel of movie and show posters with mood and time filters"><figcaption>🎡 Spud Roulette</figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="build" aria-labelledby="build-title">
+    <div class="wrap">
+      <div class="section-head">
+        <svg class="squiggle" viewBox="0 0 120 14" aria-hidden="true" focusable="false"><path d="M2 7 q10 -10 20 0 t20 0 t20 0 t20 0 t20 0 t20 0" fill="none" stroke="#C8935A" stroke-width="4" stroke-linecap="round"/></svg>
+        <h2 id="build-title">Build it yourself</h2>
+        <p>Couch Potato is open source. Grab the code, fire up Xcode, and grow your own spud in a few minutes.</p>
+      </div>
+      <div class="build-grid">
+        <div class="card reqs">
+          <h3>What you'll need</h3>
+          <ul>
+            <li><strong>Xcode 26</strong> or newer</li>
+            <li><strong>iOS 18</strong> / iPadOS 18 or <strong>macOS 15</strong> to run it</li>
+            <li><strong>XcodeGen</strong> to generate the project</li>
+            <li>A snack. Non-negotiable.</li>
+          </ul>
+        </div>
+        <ol class="steps">
+          <li>
+            <h3>Install XcodeGen</h3>
+            <div class="code"><pre><code>brew install xcodegen</code></pre><button class="copy-btn" type="button" aria-label="Copy command: brew install xcodegen">Copy</button></div>
+          </li>
+          <li>
+            <h3>Clone the repo</h3>
+            <div class="code"><pre><code>git clone https://github.com/nearbycoder/couch-potato</code></pre><button class="copy-btn" type="button" aria-label="Copy command: git clone">Copy</button></div>
+          </li>
+          <li>
+            <h3>Hop into the folder</h3>
+            <div class="code"><pre><code>cd couch-potato</code></pre><button class="copy-btn" type="button" aria-label="Copy command: cd couch-potato">Copy</button></div>
+          </li>
+          <li>
+            <h3>Generate the Xcode project</h3>
+            <div class="code"><pre><code>xcodegen</code></pre><button class="copy-btn" type="button" aria-label="Copy command: xcodegen">Copy</button></div>
+          </li>
+          <li>
+            <h3>Open it and hit Run</h3>
+            <div class="code"><pre><code>open CouchPotato.xcodeproj</code></pre><button class="copy-btn" type="button" aria-label="Copy command: open CouchPotato.xcodeproj">Copy</button></div>
+            <p>Pick an iPhone, iPad or “My Mac” destination and press <kbd>⌘</kbd> <kbd>R</kbd>.</p>
+          </li>
+        </ol>
+      </div>
+      <div class="tip">
+        <strong><span aria-hidden="true">🧈</span> Optional extra butter:</strong>
+        Couch Potato works out of the box using TVmaze and Apple's iTunes charts. For full movie search and availability across every provider, grab a free API key from
+        <a href="https://www.themoviedb.org/settings/api">TMDB</a> and paste it into <strong>Settings → Data Sources</strong> in the app.
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p class="made">Made with butter and SwiftUI <span aria-hidden="true">🧈🥔</span></p>
+    <ul class="links">
+      <li><a href="https://github.com/nearbycoder/couch-potato">GitHub</a></li>
+      <li><a href="privacy.html">Privacy</a></li>
+      <li><a href="#build">Build it</a></li>
+    </ul>
+    <small>This product uses the TMDB API but is not endorsed or certified by TMDB. TV data provided by <a href="https://www.tvmaze.com/">TVmaze</a>, licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA</a>.</small>
+    <small>Couch Potato is not affiliated with any streaming service. Service names are trademarks of their respective owners.</small>
+  </div>
+</footer>
+
+<p class="visually-hidden" id="copy-status" aria-live="polite"></p>
+
+<script>
+(function () {
+  // Copy buttons
+  var status = document.getElementById('copy-status');
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    return ok ? Promise.resolve() : Promise.reject();
+  }
+  document.querySelectorAll('.copy-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var code = btn.parentElement.querySelector('code');
+      var text = code ? code.textContent.trim() : '';
+      var p = (navigator.clipboard && window.isSecureContext)
+        ? navigator.clipboard.writeText(text)
+        : fallbackCopy(text);
+      p.then(function () {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        status.textContent = 'Copied to clipboard: ' + text;
+      }, function () {
+        btn.textContent = 'Oops';
+        status.textContent = 'Could not copy. Select the text and copy it manually.';
+      });
+      clearTimeout(btn._t);
+      btn._t = setTimeout(function () {
+        btn.textContent = 'Copy';
+        btn.classList.remove('copied');
+      }, 1800);
+    });
+  });
+
+  // Poke Spud
+  var quips = [
+    'Psst… one more episode?',
+    'Hey! I was watching that.',
+    'Is it couch o’clock yet?',
+    'I’m not lazy, I’m in energy-saving mode.',
+    'Did someone say popcorn?',
+    'Spin the wheel. I dare you.',
+    'Five potatoes. No notes.',
+    'Mashed Royalty, coming through!',
+    'Are you still watching? Yes. Always.',
+    'Remote? Never heard of her.'
+  ];
+  var i = 0;
+  var btn = document.getElementById('poke-spud');
+  var svg = document.getElementById('spud-svg');
+  var bubble = document.getElementById('spud-says');
+  btn.addEventListener('click', function () {
+    i = (i + 1) % quips.length;
+    bubble.textContent = quips[i];
+    svg.classList.remove('jump');
+    void svg.getBoundingClientRect();
+    svg.classList.add('jump');
+  });
+  svg.addEventListener('animationend', function (e) {
+    if (e.animationName === 'jump') svg.classList.remove('jump');
+  });
+})();
+</script>
+</body>
+</html>
