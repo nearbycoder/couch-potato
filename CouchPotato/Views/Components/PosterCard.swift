@@ -111,7 +111,7 @@ struct PosterGrid: View {
     var body: some View {
         let statusByKey = Dictionary(saved.map { ($0.key, $0.status) }, uniquingKeysWith: { a, _ in a })
         let tail = Set(titles.suffix(12).map(\.id))
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: layout.gridMinWidth), spacing: 14, alignment: .top)], spacing: 20) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: layout.gridMinWidth), spacing: layout.isCompact ? 12 : 14, alignment: .top)], spacing: 20) {
             ForEach(titles) { title in
                 PosterLink(route: .detail(title)) {
                     GridPoster(title: title, status: statusByKey[title.ref.key])
@@ -264,7 +264,7 @@ struct MoodTile: View {
             }
             .padding(14)
         }
-        .aspectRatio(16 / 10, contentMode: .fit)
+        .frame(height: 112)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(.white.opacity(0.08)))
         .contentShape(Rectangle())

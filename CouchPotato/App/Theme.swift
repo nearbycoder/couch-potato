@@ -63,11 +63,10 @@ struct LayoutMetrics {
     var isCompact: Bool
 
     var posterWidth: CGFloat { isCompact ? 118 : 150 }
-    var gridMinWidth: CGFloat { isCompact ? 108 : 156 }
+    var gridMinWidth: CGFloat { isCompact ? 100 : 156 }
     var heroHeight: CGFloat { isCompact ? 460 : 420 }
     var margin: CGFloat { isCompact ? 16 : 24 }
     var detailPosterWidth: CGFloat { isCompact ? 110 : 160 }
-    var moodColumns: Int { isCompact ? 2 : 3 }
 }
 
 private struct LayoutKey: EnvironmentKey {

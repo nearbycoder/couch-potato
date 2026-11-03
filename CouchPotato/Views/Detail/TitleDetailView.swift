@@ -189,12 +189,19 @@ struct DetailHeader: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // The image is an overlay so a wide backdrop can't stretch the ScrollView.
+            // Without a real backdrop, a short wash tinted by the poster stands in for one.
             Color.clear
-                .frame(height: layout.isCompact ? 300 : 380)
+                .frame(height: title.backdropURL != nil ? (layout.isCompact ? 300 : 380) : (layout.isCompact ? 190 : 230))
                 .frame(maxWidth: .infinity)
                 .overlay {
-                    RemoteImage(url: title.backdropURL ?? title.posterURL, maxPixel: 1600, placeholderTitle: nil)
-                        .blur(radius: title.backdropURL == nil ? 30 : 0)
+                    if title.backdropURL != nil {
+                        RemoteImage(url: title.backdropURL, maxPixel: 1600, placeholderTitle: nil)
+                    } else {
+                        RemoteImage(url: title.posterURL, maxPixel: 300, placeholderTitle: nil)
+                            .blur(radius: 50)
+                            .scaleEffect(1.6)
+                            .opacity(0.7)
+                    }
                 }
                 .clipped()
                 .overlay(alignment: .bottom) {

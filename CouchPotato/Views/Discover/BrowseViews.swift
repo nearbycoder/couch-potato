@@ -40,7 +40,7 @@ struct ProviderView: View {
                 if catalog.hasTMDB {
                     KindPicker(kind: $kind).padding(.horizontal, layout.margin)
                 } else {
-                    Text("Series only. Add a free TMDB API key in Settings to include \(provider.name) movies and availability for your region.")
+                    Text("Series only. Add a free TMDB key in Settings to see \(provider.name) movies too.")
                         .font(.footnote).foregroundStyle(Theme.textTertiary)
                         .padding(.horizontal, layout.margin)
                 }

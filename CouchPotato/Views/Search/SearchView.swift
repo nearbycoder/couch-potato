@@ -77,7 +77,7 @@ struct BrowseView: View {
 
             VStack(alignment: .leading, spacing: 12) {
                 SectionHeader(title: "Moods")
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: layout.moodColumns), spacing: 12) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: layout.isCompact ? 150 : 220), spacing: 12)], spacing: 12) {
                     ForEach(Mood.allCases) { mood in
                         NavigationLink(value: Route.mood(mood)) { MoodTile(mood: mood) }
                             .buttonStyle(.plain)
