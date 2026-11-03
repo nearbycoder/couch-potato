@@ -114,6 +114,30 @@ final class CouchPotatoTests: XCTestCase {
         XCTAssertEqual(Library.saved("tvmaze-tv-82", in: other)?.lastSeason, 2)
     }
 
+    func testAskDropsFieldsTheRequestDoesNotSupport() {
+        // What the model returned for this request before validation: invented service, rating, runtime, keywords.
+        let raw = WatchQuery(kind: .series, genre: .mystery, years: .last5, minRating: 6, sort: .popular, mood: .cozy,
+                             maxMinutes: 60, services: [.netflix], keywords: "cozy british mystery", summary: "Cozy mysteries")
+        let checked = raw.validated(against: "a cozy british mystery series from the last few years")
+        XCTAssertEqual(checked.services, [])
+        XCTAssertEqual(checked.minRating, 0)
+        XCTAssertEqual(checked.maxMinutes, 0)
+        XCTAssertEqual(checked.keywords, "")
+        XCTAssertEqual(checked.genre, .mystery)
+        XCTAssertEqual(checked.filter.years, .last5)
+
+        let explicit = WatchQuery(kind: .any, genre: .scifi, years: .any, minRating: 7, sort: .rating, mood: .none,
+                                  maxMinutes: 45, services: [.hbo, .hulu], keywords: "", summary: "")
+            .validated(against: "highly rated sci-fi on HBO Max, 45 minutes or less")
+        XCTAssertEqual(explicit.services, [.hbo])
+        XCTAssertEqual(explicit.minRating, 7)
+        XCTAssertEqual(explicit.maxMinutes, 45)
+        XCTAssertEqual(explicit.filter.minRating, 7)
+        XCTAssertEqual(explicit.filter.genre, .scifi)
+        XCTAssertEqual(explicit.relaxations.map(\.maxMinutes), [0, 0, 0])
+        XCTAssertEqual(explicit.relaxations.last?.services, [])
+    }
+
     func testITunesArtworkIsUpscaled() {
         let url = ITunesClient.upscale("https://is1-ssl.mzstatic.com/image/thumb/Video211/v4/x/2000x3000_Verity.jpg/115x170bb.png")
         XCTAssertEqual(url?.lastPathComponent, "600x900bb.jpg")

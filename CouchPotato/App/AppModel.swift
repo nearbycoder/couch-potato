@@ -36,6 +36,7 @@ enum Route: Hashable {
     case mood(Mood)
     case provider(Provider)
     case list(String, [CatalogTitle])
+    case ask
 
     static func detail(_ title: CatalogTitle) -> Route { .title(title.ref, preview: title) }
 }

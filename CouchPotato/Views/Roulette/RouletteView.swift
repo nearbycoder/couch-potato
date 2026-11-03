@@ -12,6 +12,7 @@ struct ShuffleView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.layout) private var layout
     @Environment(\.modelContext) private var context
+    @Environment(Intelligence.self) private var intelligence
     @Query(sort: \SavedTitle.addedAt, order: .reverse) private var saved: [SavedTitle]
 
     @State private var source: PoolSource = .queue
@@ -24,6 +25,7 @@ struct ShuffleView: View {
     @State private var winner: CatalogTitle?
     @State private var ticks = 0
     @State private var viewHeight: CGFloat = 800
+    @State private var pitch = ""
 
     private var pool: [CatalogTitle] {
         let base: [CatalogTitle] = source == .queue
@@ -72,7 +74,7 @@ struct ShuffleView: View {
                 .keyboardShortcut("r", modifiers: .command)
 
                 if let winner, !shuffling {
-                    WinnerCard(title: winner) {
+                    WinnerCard(title: winner, pitch: pitch) {
                         Library.save(winner, status: .watching, in: context)
                         app.push(.detail(winner))
                     } plan: {
@@ -82,6 +84,7 @@ struct ShuffleView: View {
                     }
                     .transition(.scale(scale: 0.95).combined(with: .opacity))
                     .padding(.horizontal, layout.margin)
+                    .task(id: winner.id) { await writePitch(for: winner) }
                 }
             }
             .padding(.vertical)
@@ -147,6 +150,20 @@ struct ShuffleView: View {
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
+    /// Streams a short on-device pitch for the pick. Silent on failure: the card works without it.
+    private func writePitch(for title: CatalogTitle) async {
+        pitch = ""
+        guard intelligence.isAvailable else { return }
+        let minutes = budget == .allNight ? nil : budget.rawValue
+        do {
+            for try await text in intelligence.pitch(for: title, mood: mood, minutes: minutes) {
+                pitch = text
+            }
+        } catch {
+            pitch = ""
+        }
+    }
+
     private func reloadDeck() {
         winner = nil
         deck = Array(pool.shuffled().prefix(12))
@@ -208,6 +225,7 @@ struct Deck: View {
 
 struct WinnerCard: View {
     var title: CatalogTitle
+    var pitch: String = ""
     var watch: () -> Void
     var plan: () -> Void
     var again: () -> Void
@@ -222,7 +240,16 @@ struct WinnerCard: View {
                     Text("Tonight's pick").font(.caption.weight(.medium)).foregroundStyle(Theme.accent)
                     Text(title.name).font(.title2.weight(.bold)).foregroundStyle(.white)
                     Text(title.metaLine).font(.footnote).foregroundStyle(.white.opacity(0.7))
-                    if !title.overview.isEmpty {
+                    if !pitch.isEmpty {
+                        Label {
+                            Text(pitch).font(.subheadline).foregroundStyle(.white.opacity(0.92))
+                                .fixedSize(horizontal: false, vertical: true)
+                                .contentTransition(.opacity)
+                        } icon: {
+                            Image(systemName: "sparkles").font(.caption).foregroundStyle(Theme.accent)
+                        }
+                        .accessibilityLabel("Why tonight: \(pitch)")
+                    } else if !title.overview.isEmpty {
                         Text(title.overview).font(.footnote).foregroundStyle(.white.opacity(0.8)).lineLimit(3)
                     }
                 }

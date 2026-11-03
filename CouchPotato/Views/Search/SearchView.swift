@@ -4,6 +4,7 @@ import SwiftUI
 struct BrowseView: View {
     @Environment(Catalog.self) private var catalog
     @Environment(Preferences.self) private var prefs
+    @Environment(Intelligence.self) private var intelligence
     @Environment(\.layout) private var layout
     @State private var query = ""
     @State private var results: [CatalogTitle] = []
@@ -51,6 +52,9 @@ struct BrowseView: View {
 
     private var idleContent: some View {
         VStack(alignment: .leading, spacing: 28) {
+            if intelligence.isAvailable {
+                AskCard().padding(.horizontal, layout.margin)
+            }
             VStack(alignment: .leading, spacing: 12) {
                 SectionHeader(title: "Suggestions")
                 FlowLayout(spacing: 8) {

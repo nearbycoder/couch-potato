@@ -150,6 +150,70 @@ final class Catalog {
         return interleave(movies.sorted { $0.popularity > $1.popularity }, try await shows)
     }
 
+    // MARK: Ask
+
+    /// Titles for an interpreted natural-language request, loosening the request step by
+    /// step when nothing matches. Same steps as the Android app.
+    func ask(_ query: WatchQuery) async throws -> [CatalogTitle] {
+        var lastError: Error?
+        for attempt in [query] + query.relaxations {
+            do {
+                let found = try await askOnce(attempt)
+                if !found.isEmpty { return found }
+            } catch {
+                lastError = error
+            }
+        }
+        if let lastError { throw lastError }
+        return []
+    }
+
+    private func askOnce(_ query: WatchQuery) async throws -> [CatalogTitle] {
+        let filter = query.filter
+        let kind = query.mediaKind
+        let yours = prefs.myServices.isEmpty ? Array(Provider.streamers.prefix(6)) : prefs.myServices
+        var results: [CatalogTitle]
+        if !query.providers.isEmpty {
+            results = try await merged(query.providers) { try await self.onService($0, kind: kind, filter: filter) }
+        } else if filter.genre != nil {
+            results = try await yourServices(yours, kind: kind, filter: filter)
+        } else if let mood = query.moodValue {
+            results = try await self.mood(mood, kind: kind, filter: filter)
+        } else if !query.trimmedKeywords.isEmpty {
+            results = filter.apply(try await search(query.trimmedKeywords).filter { kind == nil || $0.kind == kind })
+        } else {
+            results = try await yourServices(yours, kind: kind, filter: filter)
+        }
+        if query.maxMinutes > 0 {
+            results = results.filter { ($0.runtime ?? 0) <= query.maxMinutes }
+        }
+        return Array(dedupe(results).prefix(60))
+    }
+
+    private func yourServices(_ services: [Provider], kind: MediaKind?, filter: TitleFilter) async throws -> [CatalogTitle] {
+        var results = try await merged(services) { try await self.onService($0, kind: kind, filter: filter) }
+        if kind != .tv, !hasTMDB {
+            // Key-less service pages are series only; add movies from the charts.
+            results += filter.apply((try? await popular(.movie)) ?? [])
+        }
+        return results
+    }
+
+    /// Loads one page per service and interleaves them, so no single service dominates.
+    private func merged(_ providers: [Provider], _ load: @escaping (Provider) async throws -> [CatalogTitle]) async throws -> [CatalogTitle] {
+        var lists: [[CatalogTitle]] = []
+        var lastError: Error?
+        for provider in providers {
+            do { lists.append(try await load(provider)) } catch { lastError = error }
+        }
+        if lists.isEmpty, let lastError { throw lastError }
+        var result: [CatalogTitle] = []
+        for index in 0..<(lists.map(\.count).max() ?? 0) {
+            for list in lists where index < list.count { result.append(list[index]) }
+        }
+        return result
+    }
+
     // MARK: Details
 
     func detail(_ ref: TitleRef) async throws -> TitleDetail {

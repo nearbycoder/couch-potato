@@ -5,6 +5,7 @@ struct SettingsView: View {
     @Environment(Preferences.self) private var prefs
     @Environment(Catalog.self) private var catalog
     @Environment(SyncMonitor.self) private var sync
+    @Environment(Intelligence.self) private var intelligence
     @Environment(\.modelContext) private var context
     @Query private var saved: [SavedTitle]
     @Query private var nights: [CouchNight]
@@ -94,6 +95,25 @@ struct SettingsView: View {
                 Text("Data Sources")
             } footer: {
                 Text("The key syncs to your other devices through iCloud. Streaming availability is provided by JustWatch via TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB. Series data from TVmaze (CC BY-SA).")
+            }
+
+            Section {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "sparkles")
+                        .font(.title3)
+                        .foregroundStyle(intelligence.isAvailable ? Theme.accent : Theme.textSecondary)
+                        .frame(width: 28)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(intelligence.isAvailable ? "Ready" : "Unavailable").font(.body.weight(.medium))
+                        Text(intelligence.unavailableReason ?? "Ask Couch Potato and Shuffle's picks use the on-device model.")
+                            .font(.footnote).foregroundStyle(Theme.textSecondary)
+                    }
+                }
+                .accessibilityElement(children: .combine)
+            } header: {
+                Text("Apple Intelligence")
+            } footer: {
+                Text("Runs entirely on this device. Your requests are never sent to a server.")
             }
 
             Section("Planner") {

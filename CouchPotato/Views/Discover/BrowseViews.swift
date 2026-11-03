@@ -216,6 +216,7 @@ struct RouteDestinations: ViewModifier {
             case .mood(let mood): MoodView(mood: mood)
             case .provider(let provider): ProviderView(provider: provider)
             case .list(let title, let titles): TitleListView(title: title, titles: titles)
+            case .ask: AskView()
             }
         }
     }

@@ -7,6 +7,7 @@ struct CouchPotatoApp: App {
     @State private var catalog: Catalog
     @State private var app = AppModel()
     @State private var sync: SyncMonitor
+    @State private var intelligence = Intelligence()
     let container: ModelContainer
 
     init() {
@@ -47,6 +48,7 @@ struct CouchPotatoApp: App {
                 .environment(catalog)
                 .environment(app)
                 .environment(sync)
+                .environment(intelligence)
         }
         .modelContainer(container)
         #if os(macOS)
@@ -75,6 +77,7 @@ struct CouchPotatoApp: App {
                 .environment(catalog)
                 .environment(app)
                 .environment(sync)
+                .environment(intelligence)
                 .frame(width: 600, height: 760)
                 .modelContainer(container)
         }
