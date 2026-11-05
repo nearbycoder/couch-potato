@@ -35,6 +35,8 @@ Couch Potato works out of the box with **no API key**:
 - **[TVmaze](https://www.tvmaze.com/api)** — series, artwork, cast, episodes, air dates and the streamer or network each show airs on (CC BY-SA).
 - **Apple's iTunes charts and lookup** — movie artwork, charts by genre, and Apple TV Store rent/buy prices.
 
+Service pages use a per-service series catalog (up to 600 shows each) that a GitHub Action rebuilds daily from TVmaze's full index (`scripts/build_catalog.py` → `docs/catalog/v1/`).
+
 Add a free **[TMDB](https://www.themoviedb.org/settings/api) key** to unlock the full catalog: every movie and series, backdrops, trailers, recommendations, and streaming availability across every provider in 17 regions (powered by JustWatch). Either paste it in **Settings → Data Sources** (on Apple devices it syncs to your other devices through iCloud) or, for the Apple build, copy `Config/Secrets.example.xcconfig` to `Config/Secrets.xcconfig` and set `TMDB_API_KEY` (that file is gitignored).
 
 > This product uses the TMDB API but is not endorsed or certified by TMDB. Couch Potato isn't affiliated with any streaming service; service names appear as text and monograms, not logos.

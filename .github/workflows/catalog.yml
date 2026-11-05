@@ -5,7 +5,7 @@ name: Refresh series catalog
 # commit redeploys GitHub Pages.
 on:
   schedule:
-    - cron: "17 9 * * 1"   # Mondays 09:17 UTC
+    - cron: "17 9 * * *"   # Daily, 09:17 UTC (TVmaze updates through the day)
   workflow_dispatch:
 
 permissions:
