@@ -52,6 +52,8 @@ final class AppModel {
     var isPlanning = false
     var showOnboarding = false
     var showSettings = false
+    /// A search requested from outside the Browse screen (Siri, Spotlight).
+    var pendingSearch: String?
 
     static let titleActivity = "com.nearbycoder.couchpotato.title"
 
@@ -80,6 +82,12 @@ final class AppModel {
         case "queue", "watchlist": selection = .tab(.queue)
         default: break
         }
+    }
+
+    func search(_ text: String) {
+        selection = .tab(.search)
+        paths[.tab(.search)] = NavigationPath()
+        pendingSearch = text
     }
 
     func plan(_ title: CatalogTitle?) {

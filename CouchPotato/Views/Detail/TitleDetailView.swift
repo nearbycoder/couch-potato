@@ -1,3 +1,4 @@
+import AppIntents
 import SwiftUI
 import SwiftData
 
@@ -73,6 +74,8 @@ struct TitleDetailView: View {
             activity.webpageURL = ref.webURL
             activity.isEligibleForHandoff = true
             activity.isEligibleForSearch = true
+            // Tells Siri which title is on screen ("add this to my watchlist").
+            activity.appEntityIdentifier = EntityIdentifier(for: TitleEntity.self, identifier: ref.key)
         }
         .task(id: ref) {
             do {

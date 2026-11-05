@@ -5,6 +5,7 @@ struct BrowseView: View {
     @Environment(Catalog.self) private var catalog
     @Environment(Preferences.self) private var prefs
     @Environment(Intelligence.self) private var intelligence
+    @Environment(AppModel.self) private var app
     @Environment(\.layout) private var layout
     @State private var query = ""
     @State private var results: [CatalogTitle] = []
@@ -33,6 +34,12 @@ struct BrowseView: View {
         .appBackground()
         .navigationTitle("Browse")
         .searchable(text: $query, placement: .automatic, prompt: "Movies and series")
+        .onChange(of: app.pendingSearch, initial: true) {
+            if let text = app.pendingSearch {
+                query = text
+                app.pendingSearch = nil
+            }
+        }
         .task(id: query) {
             let text = query
             guard text.trimmingCharacters(in: .whitespaces).count >= 2 else { results = []; return }

@@ -8,6 +8,11 @@ struct RootView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Query(filter: #Predicate<SavedTitle> { $0.statusRaw == "queued" }) private var queued: [SavedTitle]
+    @Query private var library: [SavedTitle]
+
+    private var librarySignature: String {
+        library.map { "\($0.key):\($0.statusRaw)" }.sorted().joined(separator: ",")
+    }
 
     var body: some View {
         @Bindable var app = app
@@ -83,6 +88,11 @@ struct RootView: View {
         .onChange(of: app.selection) { clearKeyboardFocus() }
         // Another device's edits just arrived: fold any titles both devices added.
         .onChange(of: sync.lastImport) { Library.dedupe(in: context) }
+        // Keep Siri's and Spotlight's view of the library current.
+        .task(id: librarySignature) {
+            try? await Task.sleep(for: .seconds(2))
+            await AppServices.shared.actions.reindexLibrary()
+        }
     }
 
     /// AppKit hands keyboard focus to the first poster when a window opens, which
