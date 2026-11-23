@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-22T09:25:13Z",
+ "updated": "2026-11-23T09:30:36Z",
  "services": {
   "netflix": 600,
   "hulu": 600,
@@ -11,7 +11,7 @@
   "paramount": 600,
   "starz": 66,
   "amc": 217,
-  "crunchyroll": 100,
+  "crunchyroll": 101,
   "tubi": 76,
   "youtube": 600
  }
